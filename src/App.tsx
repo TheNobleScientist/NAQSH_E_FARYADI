@@ -260,11 +260,11 @@ export default function App() {
     <div className="min-h-screen bg-navy text-cream flex flex-col font-sans selection:bg-gold/30 selection:text-white overflow-x-hidden">
       
       {/* ── BACKGROUND ISLAMIC GEOMETRY PATTERN ── */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.08]">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.09]">
         <div 
           className="absolute inset-0 animate-drift"
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23C4932A' stroke-width='0.8' stroke-opacity='0.3'%3E%3Cpath d='M60,0 L77.57,42.43 L120,60 L77.57,77.57 L60,120 L42.43,77.57 L0,60 L42.43,42.43 Z'/%3E%3Cpath d='M60,20 L88.28,60 L60,100 L31.72,60 Z'/%3E%3Crect x='31.72' y='31.72' width='56.56' height='56.56' transform='rotate%2845 60 60%29'/%3E%3Crect x='42.43' y='42.43' width='35.14' height='35.14'/%3E%3Cpath d='M0,0 L15,15 L0,30 M120,0 L105,15 L120,30 M0,120 L15,105 L0,90 M120,120 L105,105 L120,90'/%3E%3Ccircle cx='60' cy='60' r='15'/%3E%3Ccircle cx='60' cy='60' r='35'/%3E%3Ccircle cx='0' cy='0' r='15'/%3E%3Ccircle cx='120' cy='0' r='15'/%3E%3Ccircle cx='0' cy='120' r='15'/%3E%3Ccircle cx='120' cy='120' r='15'/%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23C2A679' stroke-width='0.8' stroke-opacity='0.45'%3E%3Cpath d='M60,0 L77.57,42.43 L120,60 L77.57,77.57 L60,120 L42.43,77.57 L0,60 L42.43,42.43 Z'/%3E%3Cpath d='M60,20 L88.28,60 L60,100 L31.72,60 Z'/%3E%3Crect x='31.72' y='31.72' width='56.56' height='56.56' transform='rotate%2845 60 60%29'/%3E%3Crect x='42.43' y='42.43' width='35.14' height='35.14'/%3E%3Cpath d='M0,0 L15,15 L0,30 M120,0 L105,15 L120,30 M0,120 L15,105 L0,90 M120,120 L105,105 L120,90'/%3E%3Ccircle cx='60' cy='60' r='15'/%3E%3Ccircle cx='60' cy='60' r='35'/%3E%3Ccircle cx='0' cy='0' r='15'/%3E%3Ccircle cx='120' cy='0' r='15'/%3E%3Ccircle cx='0' cy='120' r='15'/%3E%3Ccircle cx='120' cy='120' r='15'/%3E%3C/g%3E%3C/svg%3E")`,
             backgroundSize: "120px 120px"
           }}
         />
@@ -312,9 +312,25 @@ export default function App() {
               by machines.
             </h1>
 
-            <p className="font-serif italic text-lg md:text-2xl text-slate tracking-wide mb-8">
-              نقش فریادی — The Engraved Plea
-            </p>
+            <div className="my-8 max-w-2xl mx-auto p-6 bg-navy2/50 border border-gold/15 rounded-md text-center">
+              <p className="font-serif italic text-2xl md:text-3xl text-gold tracking-wide mb-2" dir="rtl">
+                نقش فریادی ہے کس کی شوخیِ تحریر کا<br />
+                کاغذی ہے پیرہن ہر پیکرِ تصویر کا
+              </p>
+              <p className="font-serif italic text-sm md:text-base text-slate/90 mb-4">
+                "Naqsh faryadi hai kis ki shokhi-e-tehreer ka,<br />
+                Kaghazi hai pairahan har paikar-e-tasveer ka."
+              </p>
+              <div className="h-px bg-gradient-to-r from-transparent via-gold/25 to-transparent my-4" />
+              <p className="text-xs text-slate uppercase tracking-widest text-gold mb-2 font-semibold">Poetic Heritage & Our Corporate Identity</p>
+              <p className="text-xs md:text-sm text-cream2 font-light leading-relaxed">
+                Written by Mirza Ghalib, this opening verse of his divan asks: 
+                <span className="italic text-gold"> "Against whose mischievousness of writing is the engraved design a complainant? Every figure in a picture wears a paper robe of a petitioner."</span>
+                <br /><br />
+                In ancient times, plaintiffs stood before the court wearing paper garments to signify their grievances. Ghalib transposes this to human existence: every structure or form we etch into reality is a transient plea for existence. 
+                Our business, <strong className="text-gold font-normal">Naqsh e Faryadi</strong>, derives its name from this philosophy. To draw, to build, and to design architectural layouts is to write a temporary plea of form on the blank paper of space.
+              </p>
+            </div>
 
             <p className="max-w-2xl text-cream2 text-base md:text-lg font-light leading-relaxed mb-12">
               We build AI systems that generate, evaluate, and iterate architectural designs — from a single line of text to a valid, fully coordinated parametric BIM model. Trained the way architects learn: point, line, plane, space, human.
@@ -515,7 +531,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="relative border border-gold/15 rounded bg-[#070b14] overflow-hidden aspect-square md:aspect-auto md:h-[500px] flex items-center justify-center group cursor-grab active:cursor-grabbing">
+                <div className="relative border border-gold/15 rounded bg-[#0A111B] overflow-hidden aspect-square md:aspect-auto md:h-[500px] flex items-center justify-center group cursor-grab active:cursor-grabbing">
                   
                   {/* Grid Lines Overlay */}
                   <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
@@ -549,7 +565,7 @@ export default function App() {
                       onMouseLeave={handleMouseUp}
                     >
                       {/* Boundary lines */}
-                      <rect x="0" y="0" width="1200" height="1000" fill="none" stroke="rgba(196,147,42,0.15)" strokeWidth="4" strokeDasharray="10 10" />
+                      <rect x="0" y="0" width="1200" height="1000" fill="none" stroke="rgba(188,162,112,0.15)" strokeWidth="4" strokeDasharray="10 10" />
 
                       {/* Rooms */}
                       {layout.rooms?.map((room, i) => {
@@ -588,7 +604,7 @@ export default function App() {
                               x={rx + rw / 2}
                               y={ry + rh / 2 - 10}
                               textAnchor="middle"
-                              fill="#ffffff"
+                              fill="var(--color-white)"
                               className="text-sm font-semibold tracking-wider pointer-events-none drop-shadow-md"
                               fontSize="24"
                             >
@@ -599,7 +615,7 @@ export default function App() {
                               x={rx + rw / 2}
                               y={ry + rh / 2 + 20}
                               textAnchor="middle"
-                              fill="rgba(196,147,42,0.85)"
+                              fill="rgba(188,162,112,0.85)"
                               className="text-xs font-mono pointer-events-none"
                               fontSize="18"
                             >
@@ -628,15 +644,15 @@ export default function App() {
                           <g key={`window-${i}`}>
                             {window.isVertical ? (
                               <g>
-                                <line x1={wx} y1={wy - 30} x2={wx} y2={wy + 30} stroke="rgba(253,250,245,0.9)" strokeWidth="6" />
-                                <line x1={wx - 4} y1={wy - 30} x2={wx - 4} y2={wy + 30} stroke="#070b14" strokeWidth="2" />
-                                <line x1={wx + 4} y1={wy - 30} x2={wx + 4} y2={wy + 30} stroke="#070b14" strokeWidth="2" />
+                                <line x1={wx} y1={wy - 30} x2={wx} y2={wy + 30} stroke="rgba(233,229,219,0.9)" strokeWidth="6" />
+                                <line x1={wx - 4} y1={wy - 30} x2={wx - 4} y2={wy + 30} stroke="#0A111B" strokeWidth="2" />
+                                <line x1={wx + 4} y1={wy - 30} x2={wx + 4} y2={wy + 30} stroke="#0A111B" strokeWidth="2" />
                               </g>
                             ) : (
                               <g>
-                                <line x1={wx - 30} y1={wy} x2={wx + 30} y2={wy} stroke="rgba(253,250,245,0.9)" strokeWidth="6" />
-                                <line x1={wx - 30} y1={wy - 4} x2={wx + 30} y2={wy - 4} stroke="#070b14" strokeWidth="2" />
-                                <line x1={wx - 30} y1={wy + 4} x2={wx + 30} y2={wy + 4} stroke="#070b14" strokeWidth="2" />
+                                <line x1={wx - 30} y1={wy} x2={wx + 30} y2={wy} stroke="rgba(233,229,219,0.9)" strokeWidth="6" />
+                                <line x1={wx - 30} y1={wy - 4} x2={wx + 30} y2={wy - 4} stroke="#0A111B" strokeWidth="2" />
+                                <line x1={wx - 30} y1={wy + 4} x2={wx + 30} y2={wy + 4} stroke="#0A111B" strokeWidth="2" />
                               </g>
                             )}
                           </g>
@@ -654,20 +670,20 @@ export default function App() {
                             {door.isVertical ? (
                               <g>
                                 {/* Door open leaf */}
-                                <line x1={dx} y1={dy} x2={dx - 45} y2={dy - 45} stroke={isSelectedViolationDoor ? "#f43f5e" : "#C4932A"} strokeWidth="4" />
+                                <line x1={dx} y1={dy} x2={dx - 45} y2={dy - 45} stroke={isSelectedViolationDoor ? "#f43f5e" : "#BCA270"} strokeWidth="4" />
                                 {/* Door arc swing */}
-                                <path d={`M ${dx} ${dy - 60} A 60 60 0 0 1 ${dx - 45} ${dy - 45}`} fill="none" stroke="rgba(196,147,42,0.4)" strokeWidth="2" strokeDasharray="3 3" />
+                                <path d={`M ${dx} ${dy - 60} A 60 60 0 0 1 ${dx - 45} ${dy - 45}`} fill="none" stroke="rgba(188,162,112,0.4)" strokeWidth="2" strokeDasharray="3 3" />
                                 {/* Wall break */}
-                                <circle cx={dx} cy={dy} r="6" fill="#070b14" stroke="#C4932A" strokeWidth="2" />
+                                <circle cx={dx} cy={dy} r="6" fill="#0A111B" stroke="#BCA270" strokeWidth="2" />
                               </g>
                             ) : (
                               <g>
                                 {/* Door open leaf */}
-                                <line x1={dx} y1={dy} x2={dx + 45} y2={dy - 45} stroke={isSelectedViolationDoor ? "#f43f5e" : "#C4932A"} strokeWidth="4" />
+                                <line x1={dx} y1={dy} x2={dx + 45} y2={dy - 45} stroke={isSelectedViolationDoor ? "#f43f5e" : "#BCA270"} strokeWidth="4" />
                                 {/* Door arc swing */}
-                                <path d={`M ${dx + 60} ${dy} A 60 60 0 0 0 ${dx + 45} ${dy - 45}`} fill="none" stroke="rgba(196,147,42,0.4)" strokeWidth="2" strokeDasharray="3 3" />
+                                <path d={`M ${dx + 60} ${dy} A 60 60 0 0 0 ${dx + 45} ${dy - 45}`} fill="none" stroke="rgba(188,162,112,0.4)" strokeWidth="2" strokeDasharray="3 3" />
                                 {/* Wall break */}
-                                <circle cx={dx} cy={dy} r="6" fill="#070b14" stroke="#C4932A" strokeWidth="2" />
+                                <circle cx={dx} cy={dy} r="6" fill="#0A111B" stroke="#BCA270" strokeWidth="2" />
                               </g>
                             )}
                           </g>
@@ -1290,7 +1306,7 @@ export default function App() {
       </main>
 
       {/* ── FOOTER ── */}
-      <footer className="bg-[#070b14] border-t border-gold/10 py-10 px-6 z-10 text-xs text-slate">
+      <footer className="bg-navy border-t border-gold/15 py-10 px-6 z-10 text-xs text-slate">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="text-center md:text-left">
             <p>© 2026 Naqsh e Faryadi (Private) Limited · Karachi, Pakistan</p>
