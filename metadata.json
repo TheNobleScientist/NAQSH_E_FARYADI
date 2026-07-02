@@ -1,0 +1,6 @@
+{
+  "name": "Naqsh e Faryadi",
+  "description": "AI systems that understand, generate, and evaluate architectural designs — from text to BIM.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
