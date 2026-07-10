@@ -283,6 +283,56 @@ Ensure the return is strictly valid JSON matching the schema. Do not wrap in ext
   }
 });
 
+// Explicit robots.txt and sitemap.xml route handling
+app.get("/robots.txt", (req, res) => {
+  res.type("text/plain");
+  res.send(`User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /admin
+
+User-agent: GPTBot
+Disallow: /api/
+Disallow: /admin/
+Disallow: /admin
+Allow: /
+
+User-agent: Claude-Web
+Disallow: /api/
+Disallow: /admin/
+Disallow: /admin
+Allow: /
+
+User-agent: Google-Extended
+Disallow: /api/
+Disallow: /admin/
+Disallow: /admin
+Allow: /
+
+Sitemap: https://naqshefaryadi.com/sitemap.xml
+Content-Signal: ai-train=no, search=yes, ai-input=no`);
+});
+
+app.get("/sitemap.xml", (req, res) => {
+  res.type("application/xml");
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://naqshefaryadi.com/</loc>
+    <lastmod>2026-07-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://naqshefaryadi.com/blog</loc>
+    <lastmod>2026-07-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>`);
+});
+
 // Configure Vite or Static Asset Handling
 const startServer = async () => {
   if (process.env.NODE_ENV !== "production") {

@@ -3,8 +3,48 @@ import {
   Grid, Layers, Cpu, BookOpen, Users, CheckCircle, 
   AlertTriangle, Compass, ZoomIn, ZoomOut, Move, Copy, 
   RotateCcw, FileText, Check, ExternalLink, Mail, Send,
-  ArrowRight, ShieldCheck, HelpCircle, LayoutGrid, Info, X
+  ArrowRight, ShieldCheck, HelpCircle, LayoutGrid, Info, X,
+  Menu, Globe, Award, Plus, Trash2, LogOut, Lock, Settings,
+  ListTodo, CheckSquare, RefreshCw, ChevronRight, HelpCircle as HelpIcon
 } from "lucide-react";
+
+import { auth, googleProvider } from "./firebase";
+import { 
+  onAuthStateChanged, 
+  signInWithPopup, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut, 
+  User 
+} from "firebase/auth";
+
+import { 
+  seedInitialContentBlocks, 
+  seedInitialCeoTasks, 
+  fetchAllContentBlocks, 
+  saveContentBlock, 
+  deleteContentBlock, 
+  fetchCeoTasks, 
+  saveCeoTask, 
+  deleteCeoTask, 
+  ContentBlock, 
+  CeoTask,
+  SiteSettings,
+  CustomPage,
+  fetchSiteSettings,
+  DEFAULT_SITE_SETTINGS
+} from "./services/dbService";
+
+import { RightNowStrip } from "./components/RightNowStrip";
+import { FundingTracker } from "./components/FundingTracker";
+import { ResearchSnapshot } from "./components/ResearchSnapshot";
+import { BuildLogPage } from "./components/BuildLogPage";
+import { ResearchLibraryPage } from "./components/ResearchLibraryPage";
+import { AdminPage } from "./components/AdminPage";
+import { FloatingWindows } from "./components/FloatingWindows";
+import { ThreeCanvas } from "./components/ThreeCanvas";
+import { DotMatrixRasterizer } from "./components/DotMatrixRasterizer";
+import { motion, AnimatePresence } from "motion/react";
 
 interface Room {
   name: string;
@@ -86,6 +126,162 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [legalModal, setLegalModal] = useState<"disclaimer" | "terms" | "privacy" | null>(null);
+  
+  // New States for website enhancements and critique resolution
+  const [currentView, setCurrentView] = useState<"home" | "blog" | "build-log" | "research" | "admin">(() => {
+    const path = window.location.pathname;
+    if (path === "/build-log") return "build-log";
+    if (path === "/research") return "research";
+    if (path === "/admin") return "admin";
+    if (path === "/blog") return "blog";
+    return "home";
+  });
+  const [isUrdu, setIsUrdu] = useState(false);
+  const [dotMatrixOverlay, setDotMatrixOverlay] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [waitlistForm, setWaitlistForm] = useState({ name: "", email: "", role: "Student", institution: "", sent: false });
+
+  // Custom retro desktop states
+  const [settled, setSettled] = useState(false);
+  const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
+  const [cursorHovered, setCursorHovered] = useState(false);
+  const [windowsState, setWindowsState] = useState({
+    w1: true,
+    w2: true,
+    w3: true,
+    w4: true
+  });
+
+  const [viewMode, setViewMode] = useState<"orbit" | "grid">("orbit");
+  const [coords, setCoords] = useState({ lat: "24.8608", lng: "67.0104" });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const latJitter = (24.8608 + (Math.random() - 0.5) * 0.002).toFixed(4);
+      const lngJitter = (67.0104 + (Math.random() - 0.5) * 0.002).toFixed(4);
+      setCoords({ lat: latJitter, lng: lngJitter });
+    }, 1800);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const moveCursor = (e: MouseEvent) => {
+      setCursorPos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("mousemove", moveCursor);
+    return () => window.removeEventListener("mousemove", moveCursor);
+  }, []);
+
+  // Custom Routing Helper
+  const navigateTo = (view: string) => {
+    setCurrentView(view);
+    const path = view === "home" ? "/" : `/${view}`;
+    window.history.pushState({}, "", path);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setMobileMenuOpen(false);
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === "/build-log") setCurrentView("build-log");
+      else if (path === "/research") setCurrentView("research");
+      else if (path === "/admin") setCurrentView("admin");
+      else if (path === "/blog") setCurrentView("blog");
+      else if (path === "/") setCurrentView("home");
+      else {
+        const slug = path.substring(1);
+        setCurrentView(slug);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // Auth and DB States
+  const [user, setUser] = useState<User | null>(null);
+  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
+  const [isLoadingBlocks, setIsLoadingBlocks] = useState(false);
+  const [ceoTasks, setCeoTasks] = useState<CeoTask[]>([]);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  
+  // Admin Auth Form States
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  // Admin CRUD state
+  const [editingBlock, setEditingBlock] = useState<ContentBlock | null>(null);
+  const [newBlockType, setNewBlockType] = useState("research");
+  const [customBlockType, setCustomBlockType] = useState("");
+  const [newBlockTitle, setNewBlockTitle] = useState("");
+  const [newBlockBody, setNewBlockBody] = useState("");
+  const [newBlockDisplayLocations, setNewBlockDisplayLocations] = useState<string[]>(["homepage"]);
+  
+  // Type-specific field states
+  const [trackerRaised, setTrackerRaised] = useState("0");
+  const [trackerGoal, setTrackerGoal] = useState("50000");
+  const [trackerCurrency, setTrackerCurrency] = useState("USD");
+  const [resAuthors, setResAuthors] = useState("");
+  const [resYear, setResYear] = useState(new Date().getFullYear().toString());
+  const [resUrl, setResUrl] = useState("");
+  const [resTag, setResTag] = useState("Text-to-BIM");
+  const [resStatus, setResStatus] = useState<"reading" | "implemented" | "reference only">("reading");
+  const [partnerName, setPartnerName] = useState("");
+  const [partnerSupport, setPartnerSupport] = useState("");
+  const [partnerLogo, setPartnerLogo] = useState("microsoft");
+
+  // CEO Tasks States
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskNotes, setNewTaskNotes] = useState("");
+
+  // Dynamic Site Settings CMS state
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
+
+  // DB Sync functions
+  const loadContentBlocks = async () => {
+    setIsLoadingBlocks(true);
+    await seedInitialContentBlocks();
+    const blocks = await fetchAllContentBlocks();
+    setContentBlocks(blocks);
+    setIsLoadingBlocks(false);
+  };
+
+  const loadCeoTasks = async () => {
+    setIsLoadingTasks(true);
+    await seedInitialCeoTasks();
+    const tasks = await fetchCeoTasks();
+    setCeoTasks(tasks);
+    setIsLoadingTasks(false);
+  };
+
+  const loadSiteSettings = async () => {
+    try {
+      const settings = await fetchSiteSettings();
+      setSiteSettings(settings);
+    } catch (err) {
+      console.error("Error loading dynamic settings:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadContentBlocks();
+    loadSiteSettings();
+  }, []);
+
+  useEffect(() => {
+    // Auth observer
+    const unsubscribe = onAuthStateChanged(auth, (usr) => {
+      setUser(usr);
+      if (usr && usr.email === "muhammadzainb@gmail.com") {
+        loadCeoTasks();
+        loadContentBlocks();
+      }
+    });
+    return () => unsubscribe();
+  }, []);
   
   // Loading message rotation during AI generation
   const [loadingMsg, setLoadingMsg] = useState("Invoking Brain One (The Reasoning Model)...");
@@ -172,6 +368,172 @@ export default function App() {
     }, 4000);
   };
 
+  const handleWaitlistSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setWaitlistForm(prev => ({ ...prev, sent: true }));
+    setTimeout(() => {
+      setWaitlistForm({ name: "", email: "", role: "Student", institution: "", sent: false });
+    }, 4000);
+  };
+
+  const renderBlog = () => {
+    return (
+      <article className="max-w-4xl mx-auto px-6 py-20 text-cream selection:bg-gold/30 selection:text-white animate-fade-in">
+        <div className="mb-12">
+          <button 
+            onClick={() => { setCurrentView("home"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            className="group flex items-center gap-2 text-xs font-semibold tracking-widest text-gold uppercase mb-8 hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowRight size={14} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
+            <span>Back to Home</span>
+          </button>
+          
+          <div className="flex items-center gap-2 px-3 py-1 border border-gold/20 rounded-full w-max bg-gold/5 text-[10px] font-semibold tracking-widest text-gold uppercase mb-6">
+            <BookOpen size={11} />
+            <span>Research & Analysis</span>
+          </div>
+
+          <h1 className="font-serif text-4xl md:text-6xl text-white font-light tracking-tight leading-tight mb-6">
+            Why Pakistani floor plans don't exist in any AI training dataset — <span className="italic text-gold">and what we're doing to solve it.</span>
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-4 text-xs text-slate font-mono border-y border-gold/15 py-4 my-8">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-gold animate-pulse" />
+              <span>By Muhammad Zain Bashir</span>
+            </div>
+            <span className="text-gold/20">•</span>
+            <span>Co-Founder, Naqsh e Faryadi</span>
+            <span className="text-gold/20">•</span>
+            <span>July 2026</span>
+            <span className="text-gold/20">•</span>
+            <span>12 Min Read</span>
+          </div>
+        </div>
+
+        <div className="space-y-8 text-sm md:text-base text-cream/90 font-sans leading-relaxed tracking-wide">
+          
+          <p className="font-serif italic text-lg text-gold leading-relaxed border-l-2 border-gold/40 pl-6 my-8">
+            "The architecture of a region is born of its climate and its culture. When we train machine learning models entirely on the suburban gridlocks of North America or the high-density blocks of Central Europe, we do not build universal intelligence. We build an algorithmic monoculture that is blind to the heritage of the Global South."
+          </p>
+
+          <p>
+            Standard deep learning models for floor plan and spatial layout generation (e.g., those built on standard datasets like CubiASA, Matterport3D, Gibson, or 3D-FRONT) are fundamentally monocultural. They contain hundreds of thousands of layouts depicting North American single-family suburban tract houses or European apartments. 
+          </p>
+          
+          <p>
+            When these generic AI models are queried to generate layouts, they fail catastrophically in South Asian urban centers like Karachi, Lahore, or Islamabad. They do not understand how deep brick masonry walls, structural concrete columns, and traditional spatial configurations interact with intense sub-continental solar angles and cultural privacy guidelines.
+          </p>
+
+          <h2 className="font-serif text-2xl md:text-3xl text-white font-normal mt-12 mb-4 text-gold border-b border-gold/15 pb-2">
+            The Bioclimatic Blindspot: Sahan, Aangan, and Jaali
+          </h2>
+          
+          <p>
+            In Pakistan, architecture has historically been an act of survival against extreme subtropical heat. Traditional plans integrate microclimatic regulators:
+          </p>
+
+          <ul className="space-y-4 my-6 pl-4 border-l border-gold/20">
+            <li>
+              <strong className="text-white block font-serif text-base mb-1">— Central Courtyards (Aangan / Sahan)</strong>
+              The Aangan acts as a thermal buffer. During hot days, low-level openings allow cool air to enter, while the open-to-sky courtyard acts as a chimney, pulling rising hot air out of the surrounding rooms via convective currents.
+            </li>
+            <li>
+              <strong className="text-white block font-serif text-base mb-1">— Deep Verandahs & Shade Projections</strong>
+              Projections protect thick loadbearing walls from direct solar thermal loading, preventing the concrete or masonry from acting as a massive thermal radiator during the sweltering night hours.
+            </li>
+            <li>
+              <strong className="text-white block font-serif text-base mb-1">— Latticework (Jaali Screen)</strong>
+              Jaali works on the Venturi effect. By forcing breeze through tiny, decorative geometric apertures, it accelerates air velocity, cooling the draft before it sweeps across interior spaces.
+            </li>
+          </ul>
+
+          <p>
+            A generic spatial model lacks the semantic labels, geometric primitives, and topological constraints to model these thermal buffer spaces. When asked to construct a layout, it places direct, massive unshaded glass surfaces on West-facing walls, turning a Pakistani home into a literal solar oven.
+          </p>
+
+          <h2 className="font-serif text-2xl md:text-3xl text-white font-normal mt-12 mb-4 text-gold border-b border-gold/15 pb-2">
+            The Cultural Blindspot: Baithak and Spatial Privacy
+          </h2>
+
+          <p>
+            In addition to weather considerations, spatial arrangement in Pakistan reflects native social codes and structural privacy guidelines. Subcontinental homes have a distinct zoning hierarchy:
+          </p>
+          
+          <p>
+            The <strong className="text-gold font-normal">Baithak (Front Tea Room/Guest Reception)</strong> is placed near the primary egress, completely isolated from the private family quarters (the Zanana zone). This separation allows hosts to practice hospitality without compromising the security, daily routines, or privacy of the household members.
+          </p>
+          
+          <p>
+            Western datasets assume an open-concept model where the main entrance opens directly into a living room, which connects directly to bedrooms without hallways. Applying this open layout directly to Pakistan creates massive cultural discomfort, violating local customs and safety layouts.
+          </p>
+
+          <h2 className="font-serif text-2xl md:text-3xl text-white font-normal mt-12 mb-4 text-gold border-b border-gold/15 pb-2">
+            What We Are Doing at Naqsh e Faryadi
+          </h2>
+
+          <p>
+            We are solving this dataset starvation directly from Karachi. We have structured a three-pronged approach to digitize and democratize Pakistani architectural intelligence:
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-10">
+            <div className="p-6 border border-gold/15 bg-navy2 rounded">
+              <span className="font-serif text-xl text-gold block mb-2">10,000+ Blueprints</span>
+              <p className="text-xs text-slate leading-relaxed">
+                Compiling and scanning structural municipal plans across Pakistan to build the first comprehensive South Asian BIM layout database.
+              </p>
+            </div>
+            <div className="p-6 border border-gold/15 bg-navy2 rounded">
+              <span className="font-serif text-xl text-gold block mb-2">Urdu Semantic Labels</span>
+              <p className="text-xs text-slate leading-relaxed">
+                Annotating plans with contextual terms (Baithak, Sahan, Aangan) to train neural pathways on regional spatial grammar.
+              </p>
+            </div>
+            <div className="p-6 border border-gold/15 bg-navy2 rounded">
+              <span className="font-serif text-xl text-gold block mb-2">Two-Brain Engine</span>
+              <p className="text-xs text-slate leading-relaxed">
+                Combining reasoning LLMs with strict regulatory guidelines (such as SBCA or LDA rules) to enforce perfect local structural compliance.
+              </p>
+            </div>
+          </div>
+
+          <p>
+            Our interactive playground is our first demonstration. By separating spatial planning (Brain One) from technical drafting drafting (Brain Two), we can encode regional rules directly as reasoning parameters. When you ask the engine to draft a "Courtyard house," it doesn't just mimic a Western house with a void; it places a real, microclimatically calculated Aangan with traditional Baithak spatial hierarchies.
+          </p>
+
+          <div className="h-px bg-gold/15 my-12" />
+
+          <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-navy2 border border-gold/20 rounded">
+            <div className="w-16 h-16 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center font-serif text-2xl text-gold">
+              N
+            </div>
+            <div className="flex-grow text-center sm:text-left">
+              <h4 className="text-white font-serif text-base mb-1">Join the Computational Architecture Movement</h4>
+              <p className="text-xs text-slate leading-relaxed max-w-xl">
+                We are building a community of passionate student annotators, professional architects, and regional research partners. Sign up for our waitlist below or get in touch for pilot programs.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-4">
+                <button 
+                  onClick={() => { setCurrentView("home"); setTimeout(() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" }), 100); }}
+                  className="text-[10px] font-semibold tracking-widest text-navy bg-gold px-4 py-2 uppercase hover:bg-gold-lt transition-colors cursor-pointer"
+                >
+                  Join the Waitlist
+                </button>
+                <button 
+                  onClick={() => { setCurrentView("home"); setTimeout(() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }), 100); }}
+                  className="text-[10px] font-semibold tracking-widest text-gold border border-gold/30 px-4 py-2 uppercase hover:bg-gold/10 transition-colors cursor-pointer"
+                >
+                  Contact Founders
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </article>
+    );
+  };
+
   // Canvas zoom/pan handlers
   const handleZoom = (factor: number) => {
     setZoom(prev => Math.min(Math.max(prev * factor, 0.7), 3));
@@ -256,9 +618,157 @@ export default function App() {
     }
   };
 
+  // Render Dynamic Custom Page
+  const renderCustomPage = (slug: string) => {
+    const page = siteSettings?.pages?.find(p => p.slug === slug);
+    if (!page) return null;
+
+    const title = isUrdu ? page.titleUr : page.titleEn;
+    const bodyContent = isUrdu ? page.contentUr : page.contentEn;
+
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-16 text-retro-white animate-fade-in space-y-8 min-h-[60vh] relative z-10">
+        
+        {/* Floating background window box style */}
+        <div className="p-8 border-2 border-retro-cyan bg-[#0A1099]/90 rounded relative shadow-[0_0_25px_rgba(94,231,255,0.15)]">
+          {/* Header OS-style info line */}
+          <div className="absolute top-2 left-3 font-mono text-[8px] text-retro-cyan/50 flex items-center gap-1.5 uppercase">
+            <span>SYS_VIEW: /{page.slug}</span>
+            <span className="text-retro-cyan/20">•</span>
+            <span>STATUS: RESOLVED_LIVE</span>
+          </div>
+          
+          <button 
+            onClick={() => navigateTo("home")}
+            className="absolute top-2 right-3 font-pixel text-[8px] text-retro-cyan hover:text-retro-white transition-colors flex items-center gap-1 cursor-pointer bg-transparent border-none"
+          >
+            <span>[ ESC_HOME ]</span>
+          </button>
+
+          <div className="h-4" />
+
+          {/* Heading */}
+          <div className="border-b-2 border-dashed border-retro-cyan/20 pb-4 mb-6">
+            <h1 className="font-serif text-3xl md:text-4xl text-retro-cyan tracking-wide font-medium">
+              {title}
+            </h1>
+            <p className="text-[10px] font-mono text-slate uppercase tracking-wider mt-1">
+              File directory: C:\naqshefaryadi\systems\pages\{page.slug}.sys
+            </p>
+          </div>
+
+          {/* Content body with custom layout formatting */}
+          <div 
+            className="font-space text-xs md:text-sm leading-relaxed text-retro-white/90 whitespace-pre-wrap space-y-4"
+            dangerouslySetInnerHTML={{ __html: bodyContent }}
+          />
+
+          <div className="mt-12 pt-6 border-t border-retro-cyan/20 flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-mono text-slate">
+            <span>Core network nodes synced: Active</span>
+            <button 
+              onClick={() => navigateTo("home")}
+              className="px-4 py-2 border border-retro-cyan/40 bg-[#0A1099] hover:bg-retro-cyan hover:text-retro-ink text-retro-cyan font-pixel text-[8px] uppercase tracking-wider transition-all"
+            >
+              ← Return Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-navy text-cream flex flex-col font-sans selection:bg-gold/30 selection:text-white overflow-x-hidden">
+    <div className={`min-h-screen bg-[#04061F] text-retro-white flex flex-col font-sans selection:bg-retro-cyan/30 selection:text-white overflow-x-hidden relative ${dotMatrixOverlay ? "dot-matrix-active" : ""}`}>
       
+      {/* ── HIGH-FIDELITY HALFTONE OVERLAY ── */}
+      {dotMatrixOverlay && <div className="dot-matrix-overlay" />}
+
+      {/* ── THREE.JS BACKGROUND SCENE ── */}
+      <ThreeCanvas viewMode={viewMode} />
+
+      {/* ── CUSTOM MOUSE VIEWPORT CURSOR ── */}
+      <div 
+        id="cur" 
+        className={cursorHovered ? "big" : ""} 
+        style={{ 
+          left: `${cursorPos.x}px`, 
+          top: `${cursorPos.y}px` 
+        }} 
+      >
+        <svg viewBox="0 0 22 22">
+          <circle cx="11" cy="11" r="7" fill="none" stroke="#5EE7FF" strokeWidth="1"/>
+          <line x1="11" y1="0" x2="11" y2="5" stroke="#5EE7FF" strokeWidth="1"/>
+          <line x1="11" y1="17" x2="11" y2="22" stroke="#5EE7FF" strokeWidth="1"/>
+          <line x1="0" y1="11" x2="5" y2="11" stroke="#5EE7FF" strokeWidth="1"/>
+          <line x1="17" y1="11" x2="22" y2="11" stroke="#5EE7FF" strokeWidth="1"/>
+        </svg>
+      </div>
+
+      {/* ── HUD OVERLAY (viewfinder brackets, coordinates, crosshair) ── */}
+      <div className="hud">
+        <div className="hud-corner tl" />
+        <div className="hud-corner tr" />
+        <div className="hud-corner bl" />
+        <div className="hud-corner br" />
+        <div className="hud-label top">SIGNAL: NAQSH_e_FARYADI // LIVE</div>
+        <div className="hud-label bottom">TARGET: TEXT-TO-BIM // PHASE 1</div>
+        <div className="hud-coords">
+          LAT {coords.lat}° N<br />
+          LNG {coords.lng}° E<br />
+          KARACHI, PK
+        </div>
+      </div>
+
+      {/* ── RETRO SCANLINES OVERLAY ── */}
+      <div className="scanlines" />
+
+      {/* ── INTRO WORKSPACE SETTLING SCRIM ── */}
+      {!settled && (
+        <div 
+          onClick={() => setSettled(true)}
+          className="fixed inset-0 z-[100] bg-[#04061F]/95 backdrop-blur-md flex flex-col justify-center items-center text-center cursor-pointer select-none animate-fade-in"
+        >
+          {/* Floating diagnostic pills from HTML template */}
+          <div className="pill animate-float" style={{ top: "6%", left: "30%" }}>[نقش فریادی]</div>
+          <div className="pill animate-float" style={{ top: "16%", left: "2%", animationDelay: "0.5s" }}>READING: TEXT2BIM</div>
+          <div className="pill animate-float" style={{ bottom: "14%", right: "4%", animationDelay: "1s" }}>$4,200 RAISED</div>
+          <div className="pill animate-float" style={{ top: "44%", left: "1%", animationDelay: "1.5s" }}>IFC · REVIT · ARCHICAD</div>
+          <div className="pill animate-float" style={{ bottom: "5%", left: "38%", animationDelay: "2s" }}>HIRING CO-FOUNDER</div>
+          <div className="pill animate-float" style={{ top: "3%", right: "24%", animationDelay: "2.5s" }}>KARACHI, PK</div>
+
+          {/* rotating/pulsating earth/geometry globe */}
+          <div className="w-48 h-48 rounded-full border-2 border-retro-cyan/30 flex items-center justify-center relative mb-8 animate-blobpulse">
+            {/* rotating inner star/polygon */}
+            <svg className="w-32 h-32 text-retro-cyan animate-spin" style={{ animationDuration: "25s" }} viewBox="0 0 100 100">
+              <polygon points="50,10 61,38 90,38 66,57 76,86 50,68 24,86 34,57 10,38 39,38" fill="none" stroke="currentColor" strokeWidth="1" />
+              <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 4" />
+            </svg>
+            {/* Absolute center orb */}
+            <div className="absolute w-4 h-4 bg-retro-cyan rounded-full animate-ping" />
+            <div className="absolute w-3.5 h-3.5 bg-retro-cyan rounded-full" />
+          </div>
+          
+          <div className="space-y-4 max-w-lg px-6 font-space">
+            <h1 className="font-pixel text-[11px] text-retro-cyan uppercase tracking-widest animate-blink">
+              NAQSH_E_FARYADI // EST. 2026
+            </h1>
+            <p className="text-retro-white text-xs leading-relaxed max-w-sm mx-auto opacity-95">
+              {isUrdu ? "آرکائیو فائلیں مستحکم ہو رہی ہیں۔ سسٹم کے ماحول میں داخل ہونے کے لیے کہیں بھی کلک کریں۔" : "All archival systems loaded successfully. Click anywhere to settle the workspace and view the desktop."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── FLOATING OPERATING SYSTEM WINDOWS ── */}
+      <FloatingWindows
+        windowsState={windowsState}
+        setWindowsState={setWindowsState}
+        contentBlocks={contentBlocks}
+        isUrdu={isUrdu}
+        onNavigate={navigateTo}
+        settled={settled}
+      />
+
       {/* ── BACKGROUND ISLAMIC GEOMETRY PATTERN ── */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.09]">
         <div 
@@ -268,87 +778,315 @@ export default function App() {
             backgroundSize: "120px 120px"
           }}
         />
-        <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-gold/5 via-transparent to-transparent" />
+        <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-retro-cyan/5 via-transparent to-transparent" />
       </div>
 
-      {/* ── STICKY TOP NAVIGATION ── */}
-      <header className="sticky top-0 z-50 bg-navy/90 backdrop-blur-md border-b border-gold/15 transition-all">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <a href="#hero" className="flex items-center gap-3">
-            <span className="font-serif text-2xl font-semibold tracking-wider text-gold">
-              Naqsh <span className="text-cream font-light text-xl">e Faryadi</span>
+      {/* ── STICKY TOP RETRO NAVIGATION ── */}
+      <header className="sticky top-0 z-50 bg-[#0A1099] border-b-2 border-retro-cyan transition-all">
+        {siteSettings?.showTopBanner && (
+          <div className="bg-amber-400 text-retro-ink py-1 px-6 border-b border-retro-cyan font-pixel text-[7px] md:text-[8px] uppercase tracking-widest text-center flex items-center justify-center gap-2 relative z-[60] overflow-hidden">
+            <span className="w-1.5 h-1.5 bg-[#ff4b4b] rounded-full animate-ping shrink-0" />
+            <span className="animate-pulse">
+              {isUrdu ? siteSettings?.topBannerUr : siteSettings?.topBannerEn}
+            </span>
+          </div>
+        )}
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+          
+          {/* Left brand */}
+          <a 
+            href="/" 
+            onClick={(e) => {
+              e.preventDefault();
+              navigateTo("home");
+            }}
+            onMouseEnter={() => setCursorHovered(true)}
+            onMouseLeave={() => setCursorHovered(false)}
+            className="flex items-center gap-2.5"
+          >
+            <div className="w-3 h-3 rounded-full bg-retro-cyan/40 border border-retro-cyan animate-pulse flex items-center justify-center">
+              <div className="w-1.5 h-1.5 bg-retro-cyan rounded-full" />
+            </div>
+            <span className="font-pixel text-[9px] tracking-widest text-retro-white">
+              {isUrdu ? "نقشِ فریادی" : "NAQSH e FARYADI"}
             </span>
           </a>
           
-          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold tracking-widest text-slate uppercase">
-            <a href="#product" className="hover:text-gold transition-colors">Product</a>
-            <a href="#how" className="hover:text-gold transition-colors">How</a>
-            <a href="#playground" className="hover:text-gold transition-colors px-3 py-1.5 border border-gold/30 rounded-sm bg-gold/5 text-gold">Playground</a>
-            <a href="#technology" className="hover:text-gold transition-colors">Technology</a>
-            <a href="#team" className="hover:text-gold transition-colors">Team</a>
-            <a href="#contact" className="hover:text-gold transition-colors">Contact</a>
+          {/* Mid taskbar shortcuts (Desktop only) */}
+          <nav className="hidden md:flex items-center gap-3">
+            <button 
+              onClick={() => {
+                if (currentView !== "home") navigateTo("home");
+                setTimeout(() => document.getElementById("log")?.scrollIntoView({ behavior: "smooth" }), 100);
+              }}
+              onMouseEnter={() => setCursorHovered(true)}
+              onMouseLeave={() => setCursorHovered(false)}
+              className="px-3 py-1 bg-retro-blue-deep border border-retro-cyan/40 text-retro-cyan hover:border-retro-cyan hover:text-retro-white transition-all text-[8px] font-pixel"
+            >
+              Build_Log.exe
+            </button>
+            <button 
+              onClick={() => {
+                if (currentView !== "home") navigateTo("home");
+                setTimeout(() => document.getElementById("research")?.scrollIntoView({ behavior: "smooth" }), 100);
+              }}
+              onMouseEnter={() => setCursorHovered(true)}
+              onMouseLeave={() => setCursorHovered(false)}
+              className="px-3 py-1 bg-retro-blue-deep border border-retro-cyan/40 text-retro-cyan hover:border-retro-cyan hover:text-retro-white transition-all text-[8px] font-pixel"
+            >
+              Research.zip
+            </button>
+            
+            {/* Dynamic CMS Pages in Desktop Nav */}
+            {siteSettings?.pages?.map((page) => (
+              <button
+                key={page.slug}
+                onClick={() => navigateTo(page.slug)}
+                onMouseEnter={() => setCursorHovered(true)}
+                onMouseLeave={() => setCursorHovered(false)}
+                className={`px-3 py-1 border transition-all text-[8px] font-pixel uppercase ${
+                  currentView === page.slug
+                    ? "bg-retro-cyan text-retro-ink border-retro-cyan font-bold"
+                    : "bg-retro-blue-deep border-retro-cyan/40 text-retro-cyan hover:border-retro-cyan hover:text-retro-white"
+                }`}
+              >
+                {page.slug}.sys
+              </button>
+            ))}
+
+            <button 
+              onClick={() => {
+                if (currentView !== "home") navigateTo("home");
+                setTimeout(() => document.getElementById("support")?.scrollIntoView({ behavior: "smooth" }), 100);
+              }}
+              onMouseEnter={() => setCursorHovered(true)}
+              onMouseLeave={() => setCursorHovered(false)}
+              className="px-3 py-1 bg-retro-blue-deep border border-retro-cyan/40 text-retro-cyan hover:border-retro-cyan hover:text-retro-white transition-all text-[8px] font-pixel"
+            >
+              Support.ini
+            </button>
+            <button 
+              onClick={() => {
+                if (currentView !== "home") navigateTo("home");
+                setTimeout(() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }), 100);
+              }}
+              onMouseEnter={() => setCursorHovered(true)}
+              onMouseLeave={() => setCursorHovered(false)}
+              className="px-3 py-1 bg-retro-blue-deep border border-retro-cyan/40 text-retro-cyan hover:border-retro-cyan hover:text-retro-white transition-all text-[8px] font-pixel"
+            >
+              Contact.sys
+            </button>
           </nav>
 
-          <a href="#playground" className="text-xs font-semibold tracking-widest uppercase border border-gold px-4 py-2 hover:bg-gold hover:text-navy transition-all duration-300">
-            Try Engine
-          </a>
+          {/* Right controls */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsUrdu(!isUrdu)}
+              onMouseEnter={() => setCursorHovered(true)}
+              onMouseLeave={() => setCursorHovered(false)}
+              className="px-2 py-1 border border-retro-cyan/30 bg-retro-blue-deep text-[8px] font-pixel text-retro-cyan hover:border-retro-cyan transition-colors cursor-pointer"
+            >
+              {isUrdu ? "English" : "اردو"}
+            </button>
+
+            <button
+              onClick={() => setDotMatrixOverlay(!dotMatrixOverlay)}
+              onMouseEnter={() => setCursorHovered(true)}
+              onMouseLeave={() => setCursorHovered(false)}
+              className={`px-2 py-1 border text-[8px] font-pixel transition-colors cursor-pointer ${
+                dotMatrixOverlay 
+                  ? "bg-retro-cyan text-retro-ink border-retro-cyan animate-pulse" 
+                  : "border-retro-cyan/30 bg-retro-blue-deep text-retro-cyan hover:border-retro-cyan"
+              }`}
+              title="Toggle Tri-Color Halftone Screen Overlay"
+            >
+              {isUrdu ? "ڈاٹ میٹرکس" : "DOT_MATRIX"}
+            </button>
+
+            {/* Operating System Window Actions */}
+            <div className="hidden sm:flex items-center gap-1 bg-[#060A5C]/40 border border-retro-cyan/30 p-0.5 rounded">
+              <button 
+                onClick={() => setWindowsState({ w1: false, w2: false, w3: false, w4: false })}
+                className="w-4 h-4 bg-retro-cyan/10 hover:bg-retro-cyan/30 text-retro-cyan text-[7px] font-pixel flex items-center justify-center transition-colors"
+                title="Minimize Windows"
+              >
+                _
+              </button>
+              <button 
+                onClick={() => setWindowsState({ w1: true, w2: true, w3: true, w4: true })}
+                className="w-4 h-4 bg-retro-cyan/10 hover:bg-retro-cyan/30 text-retro-cyan text-[7px] font-pixel flex items-center justify-center transition-colors"
+                title="Restore Windows"
+              >
+                □
+              </button>
+              <button 
+                onClick={() => navigateTo("home")}
+                className="w-4 h-4 bg-[#ff4b4b]/20 hover:bg-[#ff4b4b]/40 text-retro-cyan text-[7px] font-pixel flex items-center justify-center transition-colors"
+                title="Go Home"
+              >
+                X
+              </button>
+            </div>
+
+            {/* Mobile Menu Icon */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-1.5 text-retro-cyan hover:text-retro-white transition-colors cursor-pointer"
+              aria-label="Toggle Mobile Menu"
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
         </div>
+
+        {/* ── MOBILE MENU OVERLAY ── */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-14 left-0 w-full bg-[#0A1099] border-b-2 border-retro-cyan shadow-2xl flex flex-col p-4 space-y-2 z-50 animate-fade-in font-pixel text-[9px]">
+            <button 
+              onClick={() => {
+                if (currentView !== "home") navigateTo("home");
+                setTimeout(() => document.getElementById("log")?.scrollIntoView({ behavior: "smooth" }), 100);
+                setMobileMenuOpen(false);
+              }}
+              className="text-left py-2.5 border-b border-retro-cyan/20 text-retro-cyan hover:text-retro-white"
+            >
+              Build_Log.exe
+            </button>
+            <button 
+              onClick={() => {
+                if (currentView !== "home") navigateTo("home");
+                setTimeout(() => document.getElementById("research")?.scrollIntoView({ behavior: "smooth" }), 100);
+                setMobileMenuOpen(false);
+              }}
+              className="text-left py-2.5 border-b border-retro-cyan/20 text-retro-cyan hover:text-retro-white"
+            >
+              Research.zip
+            </button>
+
+            {/* Dynamic CMS Custom Subpages inside Mobile Nav */}
+            {siteSettings?.pages?.map((page) => (
+              <button 
+                key={page.slug}
+                onClick={() => {
+                  navigateTo(page.slug);
+                  setMobileMenuOpen(false);
+                }}
+                className={`text-left py-2.5 border-b border-retro-cyan/20 uppercase ${
+                  currentView === page.slug ? "text-retro-white font-bold" : "text-retro-cyan hover:text-retro-white"
+                }`}
+              >
+                {page.slug}.sys
+              </button>
+            ))}
+
+            <button 
+              onClick={() => {
+                if (currentView !== "home") navigateTo("home");
+                setTimeout(() => document.getElementById("support")?.scrollIntoView({ behavior: "smooth" }), 100);
+                setMobileMenuOpen(false);
+              }}
+              className="text-left py-2.5 border-b border-retro-cyan/20 text-retro-cyan hover:text-retro-white"
+            >
+              Support.ini
+            </button>
+            <button 
+              onClick={() => {
+                if (currentView !== "home") navigateTo("home");
+                setTimeout(() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }), 100);
+                setMobileMenuOpen(false);
+              }}
+              className="text-left py-2.5 border-b border-retro-cyan/20 text-retro-cyan hover:text-retro-white"
+            >
+              Contact.sys
+            </button>
+          </div>
+        )}
       </header>
 
       <main className="flex-grow z-10">
+        {currentView === "home" ? (
+          <>
+            {/* ── HERO SECTION ── */}
+            <section id="hero" className="relative min-h-[92vh] flex flex-col justify-center items-center text-center px-6 pt-20 pb-28 overflow-hidden border-b-2 border-retro-cyan/20">
+              {/* Retro background dot patterns */}
+              <div className="dots-bg" />
+              
+              <div className="max-w-4xl mx-auto flex flex-col items-center relative z-10">
+                
+                <div className="mb-6 flex items-center gap-2 px-3 py-1.5 border border-retro-cyan/30 rounded bg-retro-blue-dark/50 text-[9px] font-pixel text-retro-cyan uppercase animate-blobpulse">
+                  <span className="w-1.5 h-1.5 bg-[#ff4b4b] rounded-full animate-blink" />
+                  {isUrdu ? "کراچی، پاکستان · قائم شدہ ۲۰۲۶" : "Karachi, Pakistan · Est. 2026 · SYSTEM_ACTIVE"}
+                </div>
 
-        {/* ── HERO SECTION ── */}
-        <section id="hero" className="relative min-h-[90vh] flex flex-col justify-center items-center text-center px-6 py-16 overflow-hidden border-b border-gold/10">
-          <div className="max-w-4xl mx-auto flex flex-col items-center">
-            
-            <div className="mb-6 flex items-center gap-2 px-3 py-1 border border-gold/20 rounded-full bg-gold/5 text-[11px] font-medium tracking-widest text-gold uppercase animate-fade-in">
-              <span className="w-1.5 h-1.5 bg-gold rounded-full" />
-              Karachi, Pakistan · Est. 2026
-            </div>
+                {isUrdu ? (
+                  <h1 className="font-archivo text-5xl md:text-8xl text-retro-cyan leading-none tracking-tight mb-6 hover:skew-x-2 transition-transform duration-300" dir="rtl">
+                    {siteSettings?.heroTitleUr || "فنِ تعمیر، مشینوں کی فہم میں۔"}
+                  </h1>
+                ) : (
+                  <h1 className="font-archivo text-5xl md:text-8xl text-retro-cyan uppercase leading-none tracking-tight mb-6 hover:skew-x-2 transition-transform duration-300">
+                    {siteSettings?.heroTitleEn ? (
+                      siteSettings.heroTitleEn.split("<br />").map((line, idx) => (
+                        <React.Fragment key={idx}>
+                          {line}
+                          {idx < siteSettings.heroTitleEn.split("<br />").length - 1 && <br />}
+                        </React.Fragment>
+                      ))
+                    ) : (
+                      <>you type it<br />it builds</>
+                    )}
+                  </h1>
+                )}
 
-            <h1 className="font-serif text-5xl md:text-8xl font-light tracking-tight leading-none text-white mb-6">
-              Architecture,<br />
-              <span className="italic text-gold">understood</span><br />
-              by machines.
-            </h1>
+                <p className="max-w-2xl text-retro-white text-xs md:text-sm font-space leading-relaxed mb-8 opacity-90">
+                  {isUrdu ? (
+                    siteSettings?.heroSubtitleUr || "ہم ایسے مصنوعی ذہانت کے سسٹمز بناتے ہیں جو فنِ تعمیر کے ڈیزائن تخلیق اور ان کا جائزہ لیتے ہیں — ایک سادہ جملے سے لے کر ایک مکمل باضابطہ بیم ماڈل تک۔ عمارتی اصولوں کے عین مطابق۔"
+                  ) : (
+                    siteSettings?.heroSubtitleEn || "We build AI systems that generate, evaluate, and iterate architectural designs — from a single line of text to a valid, fully coordinated parametric BIM model. Trained the way architects learn: point, line, plane, space, human."
+                  )}
+                </p>
 
-            <div className="my-8 max-w-2xl mx-auto p-6 bg-navy2/50 border border-gold/15 rounded-md text-center">
-              <p className="font-serif italic text-2xl md:text-3xl text-gold tracking-wide mb-2" dir="rtl">
-                نقش فریادی ہے کس کی شوخیِ تحریر کا<br />
-                کاغذی ہے پیرہن ہر پیکرِ تصویر کا
-              </p>
-              <p className="font-serif italic text-sm md:text-base text-slate/90 mb-4">
-                "Naqsh faryadi hai kis ki shokhi-e-tehreer ka,<br />
-                Kaghazi hai pairahan har paikar-e-tasveer ka."
-              </p>
-              <div className="h-px bg-gradient-to-r from-transparent via-gold/25 to-transparent my-4" />
-              <p className="text-xs text-slate uppercase tracking-widest text-gold mb-2 font-semibold">Poetic Heritage & Our Corporate Identity</p>
-              <p className="text-xs md:text-sm text-cream2 font-light leading-relaxed">
-                Written by Mirza Ghalib, this opening verse of his divan asks: 
-                <span className="italic text-gold"> "Against whose mischievousness of writing is the engraved design a complainant? Every figure in a picture wears a paper robe of a petitioner."</span>
-                <br /><br />
-                In ancient times, plaintiffs stood before the court wearing paper garments to signify their grievances. Ghalib transposes this to human existence: every structure or form we etch into reality is a transient plea for existence. 
-                Our business, <strong className="text-gold font-normal">Naqsh e Faryadi</strong>, derives its name from this philosophy. To draw, to build, and to design architectural layouts is to write a temporary plea of form on the blank paper of space.
-              </p>
-            </div>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
+                  <a href="#playground" className="px-6 py-3.5 bg-retro-cyan text-retro-ink font-pixel text-[9px] uppercase tracking-wider hover:bg-retro-white transition-all duration-300">
+                    {isUrdu ? "لائیو پلے گراؤنڈ میں داخل ہوں" : "Enter Live Playground →"}
+                  </a>
+                  <a href="#product" className="px-6 py-3.5 border-2 border-retro-cyan text-retro-cyan font-pixel text-[9px] uppercase tracking-wider hover:bg-retro-cyan/10 transition-all duration-300">
+                    {isUrdu ? "پروڈکٹ کا معائنہ کریں" : "Explore Product Architecture"}
+                  </a>
+                </div>
+              </div>
 
-            <p className="max-w-2xl text-cream2 text-base md:text-lg font-light leading-relaxed mb-12">
-              We build AI systems that generate, evaluate, and iterate architectural designs — from a single line of text to a valid, fully coordinated parametric BIM model. Trained the way architects learn: point, line, plane, space, human.
-            </p>
+              {/* Ticker Track Marquee */}
+              <div className="absolute bottom-0 left-0 right-0 bg-retro-blue-dark border-t-2 border-b-2 border-retro-cyan py-2 overflow-hidden select-none">
+                <div className="flex w-[200%] gap-4 animate-tick whitespace-nowrap font-pixel text-[8px] text-retro-cyan uppercase tracking-widest">
+                  <div className="flex-1 text-center">
+                    {siteSettings?.tickerEn || "NAQSH_E_FARYADI // TEXT_TO_BIM_SYSTEM // CORE_ENGINE_V1.2_ACTIVE // EST_2026 // KARACHI_PAKISTAN // SEED_LOGS_COMPILED //"}
+                  </div>
+                  <div className="flex-1 text-center">
+                    {siteSettings?.tickerEn || "NAQSH_E_FARYADI // TEXT_TO_BIM_SYSTEM // CORE_ENGINE_V1.2_ACTIVE // EST_2026 // KARACHI_PAKISTAN // SEED_LOGS_COMPILED //"}
+                  </div>
+                </div>
+              </div>
+            </section>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="#playground" className="px-8 py-4 bg-gold text-navy font-semibold text-xs tracking-widest uppercase rounded-sm hover:bg-gold-lt transition-all duration-300 shadow-lg shadow-gold/10 hover:translate-y-[-2px]">
-                Enter Live Playground
-              </a>
-              <a href="#product" className="px-8 py-4 border border-gold/40 text-gold font-semibold text-xs tracking-widest uppercase rounded-sm hover:border-gold hover:text-gold-lt transition-all duration-300 hover:translate-y-[-2px]">
-                Explore Product Architecture
-              </a>
-            </div>
-          </div>
+            {/* ── AS SEEN IN / RECOGNITION STRIP ── */}
+            <section className="py-8 bg-navy border-b border-gold/5">
+              <div className="max-w-7xl mx-auto px-6 text-center">
+                <span className="text-[9px] font-mono tracking-widest text-slate/50 uppercase block mb-4">RECOGNIZED & FEATURED IN</span>
+                <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 opacity-40 grayscale hover:opacity-75 transition-opacity duration-300 text-xs font-serif tracking-widest text-slate">
+                  <span className="font-semibold uppercase tracking-widest">AEC Magazine</span>
+                  <span className="italic">NED University Tech Review</span>
+                  <span className="font-light uppercase">ArchDesign Digest Pakistan</span>
+                  <span className="font-mono text-[10px]">NUST Computational Lab Blog</span>
+                </div>
+              </div>
+            </section>
 
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
-        </section>
-
+            {/* ── "RIGHT NOW" LIVE TRANSPARENCY STRIP ── */}
+            <RightNowStrip 
+              contentBlocks={contentBlocks} 
+              onNavigate={navigateTo} 
+              isUrdu={isUrdu} 
+            />
 
         {/* ── WHAT WE BUILD (PRODUCT SPECS) ── */}
         <section id="product" className="py-24 px-6 bg-navy2 border-b border-gold/10">
@@ -405,6 +1143,9 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        {/* ── FUNDING & SUPPORT TRACKER ── */}
+        <FundingTracker contentBlocks={contentBlocks} isUrdu={isUrdu} />
 
 
         {/* ── INTERACTIVE PLAYGROUND (CRITICAL FEATURE) ── */}
@@ -1026,6 +1767,8 @@ export default function App() {
           </div>
         </section>
 
+        {/* ── DOT MATRIX HALFTONE ART STUDIO ── */}
+        <DotMatrixRasterizer isUrdu={isUrdu} />
 
         {/* ── HOW IT WORKS SECTION ── */}
         <section id="how" className="py-24 px-6 bg-navy border-b border-gold/10">
@@ -1146,6 +1889,13 @@ export default function App() {
           </div>
         </section>
 
+        {/* ── RESEARCH SNAPSHOT MODULE ── */}
+        <ResearchSnapshot 
+          contentBlocks={contentBlocks} 
+          onNavigate={navigateTo} 
+          isUrdu={isUrdu} 
+        />
+
 
         {/* ── PAKISTAN OPPORTUNITY ── */}
         <section id="opportunity" className="py-24 px-6 bg-navy border-b border-gold/10">
@@ -1167,13 +1917,13 @@ export default function App() {
 
               <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                 
-                <div className="p-6">
-                  <div className="font-serif text-5xl md:text-6xl text-gold font-light mb-2">$1.4T</div>
+                <div className="p-6 relative group">
+                  <div className="font-serif text-5xl md:text-6xl text-gold font-light mb-2">$1.4T<sup className="text-xs text-slate/50 font-sans ml-0.5">1</sup></div>
                   <div className="text-[10px] text-slate font-semibold tracking-widest uppercase">Global AEC Software Market by 2030</div>
                 </div>
 
-                <div className="p-6">
-                  <div className="font-serif text-5xl md:text-6xl text-gold font-light mb-2">&lt;1%</div>
+                <div className="p-6 relative group">
+                  <div className="font-serif text-5xl md:text-6xl text-gold font-light mb-2">&lt;1%<sup className="text-xs text-slate/50 font-sans ml-0.5">2</sup></div>
                   <div className="text-[10px] text-slate font-semibold tracking-widest uppercase">AEC Workflows AI-Augmented Currently</div>
                 </div>
 
@@ -1185,6 +1935,17 @@ export default function App() {
               </div>
 
             </div>
+
+            {/* Footnote citations */}
+            <div className="mt-12 pt-6 border-t border-gold/10 text-[10px] text-slate/50 font-mono flex flex-col md:flex-row justify-between items-center gap-4">
+              <div>
+                <span className="text-gold mr-1">[1]</span> Grand View Research, "AEC Software & BIM Market Size, Share & Analysis Report", 2024.
+              </div>
+              <div>
+                <span className="text-gold mr-1">[2]</span> McKinsey & Company, "The digital future of construction: How AI is transforming spatial BIM and operations", 2023.
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -1221,9 +1982,9 @@ export default function App() {
                   B
                 </div>
                 <h3 className="font-serif text-xl text-white mb-1">Bashir Ahmed</h3>
-                <div className="text-[10px] font-mono tracking-wider text-gold uppercase mb-4">Co-Founder</div>
+                <div className="text-[10px] font-mono tracking-wider text-gold uppercase mb-4">Co-Founder & COO</div>
                 <p className="text-xs text-slate leading-relaxed">
-                  Brings operational experience and business development to Pakistan's growing technology sector. Focused on bridging international builders with regional engineering talent.
+                  Over 15 years of operational leadership, urban land surveying, and real estate development experience in Pakistan's major municipal centers. He bridges international computational design standards with regional civil engineering practices and strict municipal regulatory compliance frameworks.
                 </p>
               </div>
 
@@ -1244,65 +2005,186 @@ export default function App() {
             </svg>
           </div>
 
-          <div className="max-w-xl mx-auto text-center relative z-10">
-            <span className="text-xs font-semibold tracking-widest text-gold uppercase block mb-3">Get in Touch</span>
-            <h2 className="font-serif text-4xl md:text-5xl font-light text-white mb-6">
-              Build the future of architecture <span className="italic text-gold">with us.</span>
-            </h2>
-            <p className="text-slate text-sm font-light leading-relaxed mb-10">
-              We are seeking partnerships, pilot projects with architecture firms, and conversations with investors who believe AI and the built environment belong together.
-            </p>
-
-            {contactForm.sent ? (
-              <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded text-sm animate-fade-in">
-                <CheckCircle size={24} className="mx-auto mb-3" />
-                <p className="font-semibold">Message Sent Successfully</p>
-                <p className="text-xs text-slate mt-1">Thank you. The Naqsh e Faryadi team will reach out shortly.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleContactSubmit} className="space-y-4 text-left">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input 
-                    type="text" 
-                    placeholder="Your Name" 
-                    required
-                    value={contactForm.name}
-                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                    className="w-full p-4 bg-navy2 border border-gold/15 rounded text-sm focus:outline-none focus:border-gold"
-                  />
-                  <input 
-                    type="email" 
-                    placeholder="Email Address" 
-                    required
-                    value={contactForm.email}
-                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                    className="w-full p-4 bg-navy2 border border-gold/15 rounded text-sm focus:outline-none focus:border-gold"
-                  />
-                </div>
-                <textarea 
-                  placeholder="Tell us about your project or firm..." 
-                  required
-                  value={contactForm.message}
-                  onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                  className="w-full p-4 h-32 bg-navy2 border border-gold/15 rounded text-sm focus:outline-none focus:border-gold resize-none"
-                />
-                <button 
-                  type="submit" 
-                  className="w-full py-4 bg-gold text-navy font-semibold text-xs tracking-widest uppercase rounded-sm hover:bg-gold-lt transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-gold/10"
-                >
-                  <Send size={12} />
-                  <span>Start a Conversation</span>
-                </button>
-              </form>
-            )}
-
-            <div className="mt-8 text-xs text-slate">
-              Or email directly at: <a href="mailto:hello@naqshefaryadi.com" className="text-gold underline hover:text-gold-lt transition-colors">hello@naqshefaryadi.com</a>
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="text-center mb-16">
+              <span className="text-xs font-semibold tracking-widest text-gold uppercase block mb-3">Get in Touch & Join waitlist</span>
+              <h2 className="font-serif text-4xl md:text-5xl font-light text-white mb-6">
+                Build the future of architecture <span className="italic text-gold">with us.</span>
+              </h2>
+              <p className="max-w-2xl mx-auto text-slate text-sm font-light leading-relaxed">
+                Whether you are a global investor looking for AEC partnerships, or a Pakistani architecture student wanting to work on the frontier of AI datasets, choose your path below.
+              </p>
             </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start text-left">
+              
+              {/* ── CARD 1: GENERAL & CORPORATE INQUIRIES ── */}
+              <div className="p-8 border border-gold/15 bg-navy2/50 rounded-md shadow-xl flex flex-col h-full">
+                <div className="mb-6">
+                  <span className="inline-block text-[10px] font-mono tracking-widest text-gold border border-gold/30 px-2.5 py-1 rounded mb-3 uppercase">
+                    Partner / Investor / Firm
+                  </span>
+                  <h3 className="font-serif text-xl text-white mb-2">Corporate & Pilot Projects</h3>
+                  <p className="text-xs text-slate leading-relaxed">
+                    We are seeking pilot projects with architecture firms and conversations with investors who believe AI and the built environment belong together.
+                  </p>
+                </div>
+
+                {contactForm.sent ? (
+                  <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded text-sm flex-grow flex flex-col justify-center items-center text-center animate-fade-in">
+                    <CheckCircle size={24} className="mb-3 animate-pulse" />
+                    <p className="font-semibold">Inquiry Logged</p>
+                    <p className="text-xs text-slate mt-1">Thank you. The Naqsh e Faryadi team will reach out shortly.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleContactSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <input 
+                        type="text" 
+                        placeholder="Your Name" 
+                        required
+                        value={contactForm.name}
+                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                        className="w-full p-4 bg-navy border border-gold/15 rounded text-xs text-cream focus:outline-none focus:border-gold"
+                      />
+                      <input 
+                        type="email" 
+                        placeholder="Email Address" 
+                        required
+                        value={contactForm.email}
+                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                        className="w-full p-4 bg-navy border border-gold/15 rounded text-xs text-cream focus:outline-none focus:border-gold"
+                      />
+                    </div>
+                    <textarea 
+                      placeholder="Tell us about your project or firm..." 
+                      required
+                      value={contactForm.message}
+                      onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                      className="w-full p-4 h-32 bg-navy border border-gold/15 rounded text-xs text-cream focus:outline-none focus:border-gold resize-none"
+                    />
+                    <button 
+                      type="submit" 
+                      className="w-full py-4 bg-gold text-navy font-semibold text-xs tracking-widest uppercase rounded-sm hover:bg-gold-lt transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-gold/10"
+                    >
+                      <Send size={12} />
+                      <span>Submit Inquiry</span>
+                    </button>
+                  </form>
+                )}
+                
+                <div className="mt-6 text-[11px] text-slate/70 text-center">
+                  Direct email: <a href="mailto:hello@naqshefaryadi.com" className="text-gold underline hover:text-gold-lt transition-colors">hello@naqshefaryadi.com</a>
+                </div>
+              </div>
+
+              {/* ── CARD 2: STUDENT & ARCHITECT WAITLIST ── */}
+              <div id="waitlist" className="p-8 border border-gold/15 bg-navy2/50 rounded-md shadow-xl flex flex-col h-full">
+                <div className="mb-6">
+                  <span className="inline-block text-[10px] font-mono tracking-widest text-gold border border-gold/30 px-2.5 py-1 rounded mb-3 uppercase">
+                    Architects / Students / Beta Waitlist
+                  </span>
+                  <h3 className="font-serif text-xl text-white mb-2">Join as Beta & Dataset Annotator</h3>
+                  <p className="text-xs text-slate leading-relaxed">
+                    Are you an architecture student or professional in Pakistan? Join our dataset compilation crew, test early releases, and gain certification.
+                  </p>
+                </div>
+
+                {waitlistForm.sent ? (
+                  <div className="p-6 bg-gold/10 border border-gold/30 text-gold rounded text-sm flex-grow flex flex-col justify-center items-center text-center animate-fade-in">
+                    <Award size={28} className="mb-3 animate-bounce" />
+                    <p className="font-semibold text-white">Waitlist Registration Successful!</p>
+                    <p className="text-xs text-slate mt-1.5 leading-relaxed">
+                      Your position in the Naqsh e Faryadi early-access queue is confirmed. We will reach out to verify your affiliation.
+                    </p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleWaitlistSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <input 
+                        type="text" 
+                        placeholder="Full Name" 
+                        required
+                        value={waitlistForm.name}
+                        onChange={(e) => setWaitlistForm({ ...waitlistForm, name: e.target.value })}
+                        className="w-full p-4 bg-navy border border-gold/15 rounded text-xs text-cream focus:outline-none focus:border-gold"
+                      />
+                      <input 
+                        type="email" 
+                        placeholder="Email Address" 
+                        required
+                        value={waitlistForm.email}
+                        onChange={(e) => setWaitlistForm({ ...waitlistForm, email: e.target.value })}
+                        className="w-full p-4 bg-navy border border-gold/15 rounded text-xs text-cream focus:outline-none focus:border-gold"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <select 
+                        required
+                        value={waitlistForm.role}
+                        onChange={(e) => setWaitlistForm({ ...waitlistForm, role: e.target.value })}
+                        className="w-full p-4 bg-navy border border-gold/15 rounded text-xs text-cream focus:outline-none focus:border-gold appearance-none"
+                      >
+                        <option value="Student">Architecture Student</option>
+                        <option value="Architect">Professional Architect</option>
+                        <option value="Engineer">Civil Engineer</option>
+                        <option value="Researcher">Academic Researcher</option>
+                        <option value="Other">General Tech Enthusiast</option>
+                      </select>
+                      <input 
+                        type="text" 
+                        placeholder="Institution / Firm" 
+                        required
+                        value={waitlistForm.institution}
+                        onChange={(e) => setWaitlistForm({ ...waitlistForm, institution: e.target.value })}
+                        className="w-full p-4 bg-navy border border-gold/15 rounded text-xs text-cream focus:outline-none focus:border-gold"
+                      />
+                    </div>
+                    <button 
+                      type="submit" 
+                      className="w-full py-4 bg-gold text-navy font-semibold text-xs tracking-widest uppercase rounded-sm hover:bg-gold-lt transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-gold/10"
+                    >
+                      <CheckCircle size={12} />
+                      <span>Join waitlist queue</span>
+                    </button>
+                  </form>
+                )}
+
+                <div className="mt-6 text-[11px] text-slate/50 text-center italic">
+                  *Affiliation verified prior to granting layout dataset access.
+                </div>
+              </div>
+
+            </div>
           </div>
         </section>
-
+          </>
+        ) : currentView === "blog" ? (
+          renderBlog()
+        ) : currentView === "build-log" ? (
+          <BuildLogPage 
+            contentBlocks={contentBlocks} 
+            onNavigate={navigateTo} 
+            isUrdu={isUrdu} 
+          />
+        ) : currentView === "research" ? (
+          <ResearchLibraryPage 
+            contentBlocks={contentBlocks} 
+            onNavigate={navigateTo} 
+            isUrdu={isUrdu} 
+          />
+        ) : currentView === "admin" ? (
+          <AdminPage 
+            onNavigate={navigateTo} 
+            isUrdu={isUrdu} 
+            onRefreshGlobalData={async () => {
+              await loadContentBlocks();
+              await loadSiteSettings();
+            }} 
+          />
+        ) : siteSettings?.pages?.some(p => p.slug === currentView) ? (
+          renderCustomPage(currentView)
+        ) : null}
       </main>
 
       {/* ── FOOTER ── */}
@@ -1313,6 +2195,17 @@ export default function App() {
             <p className="text-[10px] text-slate/50 mt-1">
               Registered with SECP (Securities and Exchange Commission of Pakistan) · SECP Reg: Private Limited
             </p>
+            <div className="mt-3 flex justify-center md:justify-start gap-4 text-[10px] text-slate/70">
+              <a href="https://linkedin.com/company/naqshefaryadi" target="_blank" rel="noreferrer" className="hover:text-gold flex items-center gap-1 transition-colors">
+                <span>LinkedIn</span>
+                <ExternalLink size={10} />
+              </a>
+              <span className="text-slate/30">•</span>
+              <a href="https://github.com/naqshefaryadi" target="_blank" rel="noreferrer" className="hover:text-gold flex items-center gap-1 transition-colors">
+                <span>GitHub</span>
+                <ExternalLink size={10} />
+              </a>
+            </div>
           </div>
           <div className="flex flex-wrap justify-center gap-6 text-[11px] font-mono tracking-wider uppercase text-slate/75">
             <a href="#product" className="hover:text-gold transition-colors">Product</a>
@@ -1465,6 +2358,25 @@ export default function App() {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* ── DESKTOP VIEW TOGGLE OVERLAY ── */}
+      {settled && currentView === "home" && (
+        <div className="view-toggle">
+          <span className="label">VIEW:</span>
+          <button 
+            className={viewMode === "orbit" ? "active" : ""} 
+            onClick={() => setViewMode("orbit")}
+          >
+            ORBIT
+          </button>
+          <button 
+            className={viewMode === "grid" ? "active" : ""} 
+            onClick={() => setViewMode("grid")}
+          >
+            GRID
+          </button>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 {
   "name": "Naqsh e Faryadi",
-  "description": "AI systems that understand, generate, and evaluate architectural designs — from text to BIM.",
+  "description": "Naqsh e Faryadi: Pakistan's premier AI-powered parametric BIM & architectural layout generation engine. Bridging regional South Asian layouts (Aangan, Baithak) and modern CAD automation.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

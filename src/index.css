@@ -1,9 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;700&family=Press+Start+2P&family=VT323&family=Archivo+Black&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-serif: "Lora", serif;
   --font-sans: "DM Sans", sans-serif;
+  --font-pixel: "Press Start 2P", monospace;
+  --font-vt: "VT323", monospace;
+  --font-archivo: "Archivo Black", sans-serif;
+  --font-space: "Space Mono", monospace;
+  --font-plex: "IBM Plex Mono", monospace;
+
   --color-navy: #0B111E;
   --color-navy2: #121A2B;
   --color-gold: #C2A679;
@@ -12,21 +18,255 @@
   --color-cream2: #C1B9AE;
   --color-slate: #7B8A9D;
   --color-white: #ECE8E0;
+
+  --color-retro-blue: #141FE0;
+  --color-retro-blue-deep: #0A1099;
+  --color-retro-blue-dark: #060A5C;
+  --color-retro-ink: #04061F;
+  --color-retro-white: #F2F4FF;
+  --color-retro-cyan: #5EE7FF;
 }
 
 body {
-  background-color: var(--color-navy);
-  color: var(--color-cream);
-  font-family: var(--font-sans);
+  background-color: var(--color-retro-blue);
+  color: var(--color-retro-white);
+  font-family: var(--font-space);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
-.font-serif {
-  font-family: var(--font-serif);
+.scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+  pointer-events: none;
+  opacity: 0.05;
+  background: repeating-linear-gradient(0deg, #fff 0px, transparent 1px, transparent 3px);
 }
 
-.font-sans {
-  font-family: var(--font-sans);
+.dots-bg {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+  background-size: 14px 14px;
 }
+
+/* Custom cursor viewfinder crosshair */
+#cur {
+  position: fixed;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  z-index: 997;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: difference;
+  transition: width .2s, height .2s;
+}
+
+#cur svg {
+  width: 100%;
+  height: 100%;
+}
+
+#cur.big {
+  width: 38px;
+  height: 38px;
+}
+
+/* ===== HUD OVERLAY (viewfinder brackets, coords, crosshair) ===== */
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--color-retro-cyan);
+  mix-blend-mode: screen;
+}
+
+.hud-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-color: var(--color-retro-cyan);
+  opacity: 0.85;
+}
+
+.hud-corner.tl {
+  top: 64px;
+  left: 18px;
+  border-top: 2px solid var(--color-retro-cyan);
+  border-left: 2px solid var(--color-retro-cyan);
+}
+
+.hud-corner.tr {
+  top: 64px;
+  right: 18px;
+  border-top: 2px solid var(--color-retro-cyan);
+  border-right: 2px solid var(--color-retro-cyan);
+}
+
+.hud-corner.bl {
+  bottom: 18px;
+  left: 18px;
+  border-bottom: 2px solid var(--color-retro-cyan);
+  border-left: 2px solid var(--color-retro-cyan);
+}
+
+.hud-corner.br {
+  bottom: 18px;
+  right: 18px;
+  border-bottom: 2px solid var(--color-retro-cyan);
+  border-right: 2px solid var(--color-retro-cyan);
+}
+
+.hud-label {
+  position: absolute;
+}
+
+.hud-label.top {
+  top: 70px;
+  left: 52px;
+}
+
+.hud-label.bottom {
+  bottom: 24px;
+  left: 52px;
+}
+
+.hud-coords {
+  position: absolute;
+  bottom: 24px;
+  right: 52px;
+  text-align: right;
+  line-height: 1.6;
+}
+
+/* ===== VIEW TOGGLE (Pahari-style) ===== */
+.view-toggle {
+  position: absolute;
+  bottom: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-retro-cyan);
+  border-radius: 30px;
+  padding: 6px;
+  backdrop-filter: blur(6px);
+}
+
+.view-toggle span.label {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: #c3c9f7;
+  padding: 0 8px;
+}
+
+.view-toggle button {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  padding: 9px 16px;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  color: var(--color-retro-white);
+  cursor: pointer;
+  transition: .2s;
+}
+
+.view-toggle button.active {
+  background: var(--color-retro-cyan);
+  color: var(--color-retro-ink);
+}
+
+/* ===== PILL OVERLAYS ===== */
+.pill {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 30px;
+  padding: 6px 16px;
+  font-family: var(--font-plex);
+  font-size: 11px;
+  color: #dfe4ff;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 405;
+}
+
+/* Animations */
+@keyframes blink {
+  50% { opacity: 0.15; }
+}
+
+@keyframes blobpulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(94, 231, 255, 0.5); }
+  50% { box-shadow: 0 0 22px rgba(94, 231, 255, 0.9); }
+}
+
+@keyframes tick {
+  to { transform: translateX(-50%); }
+}
+
+@keyframes shimmer {
+  to { background-position: -40px 0; }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: floatY 4s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink 0.9s infinite;
+}
+
+.animate-blobpulse {
+  animation: blobpulse 3s ease-in-out infinite;
+}
+
+.animate-tick {
+  animation: tick 22s linear infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ===== HIGH-FIDELITY TRI-COLOR DOT MATRIX HALFTONE OVERLAY ===== */
+.dot-matrix-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.12; /* Optimized for readable web UI overlays */
+  background-image: 
+    radial-gradient(circle, #ff4b4b 1.2px, transparent 1.2px),
+    radial-gradient(circle, #5EE7FF 1.2px, transparent 1.2px),
+    radial-gradient(circle, #0B111E 1.8px, transparent 1.8px);
+  background-size: 7px 7px;
+  background-position: 0 0, 3.5px 3.5px, 1.7px 5.2px;
+  mix-blend-mode: screen;
+  transition: opacity 0.3s ease;
+}
+
+.dot-matrix-active {
+  filter: contrast(1.1) saturate(1.15);
+}
+
+
 

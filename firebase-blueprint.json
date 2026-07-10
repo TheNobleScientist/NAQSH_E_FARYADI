@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "ContentBlock": {
+      "title": "ContentBlock",
+      "description": "Flexible CMS block representing public transparency logs, research, and milestones.",
+      "type": "object",
+      "properties": {
+        "blockType": {
+          "type": "string",
+          "description": "The category of content block, e.g., 'research', 'funding_tracker', 'partner_thanks', 'milestone', 'team', or 'general'"
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "description": "Type-specific structured fields like goal, raised, authors, year, status, or tag"
+        },
+        "displayLocations": {
+          "type": "array",
+          "description": "Locations where this block is displayed, e.g. ['homepage', 'build-log', 'research']"
+        },
+        "order": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["blockType", "title", "body", "displayLocations", "order", "createdAt"]
+    },
+    "CeoTask": {
+      "title": "CeoTask",
+      "description": "Private, unlisted task item on the CEO's personal checklist.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["To Do", "In Progress", "Done"]
+        },
+        "order": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["title", "status", "order", "createdAt"]
+    }
+  },
+  "firestore": {
+    "contentBlocks": {
+      "schema": {
+        "$ref": "#/entities/ContentBlock"
+      },
+      "description": "Public content blocks displayed on homepage, build-log, and research pages."
+    },
+    "ceoTasks": {
+      "schema": {
+        "$ref": "#/entities/CeoTask"
+      },
+      "description": "Private checklist of company tasks managed by the CEO."
+    }
+  }
+}

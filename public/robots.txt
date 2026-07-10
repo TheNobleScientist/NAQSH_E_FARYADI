@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /admin
+
+User-agent: GPTBot
+Disallow: /api/
+Disallow: /admin/
+Disallow: /admin
+Allow: /
+
+User-agent: Claude-Web
+Disallow: /api/
+Disallow: /admin/
+Disallow: /admin
+Allow: /
+
+User-agent: Google-Extended
+Disallow: /api/
+Disallow: /admin/
+Disallow: /admin
+Allow: /
+
+Sitemap: https://naqshefaryadi.com/sitemap.xml
+Content-Signal: ai-train=no, search=yes, ai-input=no
