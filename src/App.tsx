@@ -142,7 +142,7 @@ export default function App() {
   const [waitlistForm, setWaitlistForm] = useState({ name: "", email: "", role: "Student", institution: "", sent: false });
 
   // Custom retro desktop states
-  const [settled, setSettled] = useState(false);
+  const [settled, setSettled] = useState(true);
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
   const [cursorHovered, setCursorHovered] = useState(false);
   const [windowsState, setWindowsState] = useState({
@@ -721,43 +721,6 @@ export default function App() {
 
       {/* ── RETRO SCANLINES OVERLAY ── */}
       <div className="scanlines" />
-
-      {/* ── INTRO WORKSPACE SETTLING SCRIM ── */}
-      {!settled && (
-        <div 
-          onClick={() => setSettled(true)}
-          className="fixed inset-0 z-[100] bg-[#04061F]/95 backdrop-blur-md flex flex-col justify-center items-center text-center cursor-pointer select-none animate-fade-in"
-        >
-          {/* Floating diagnostic pills from HTML template */}
-          <div className="pill animate-float" style={{ top: "6%", left: "30%" }}>[نقش فریادی]</div>
-          <div className="pill animate-float" style={{ top: "16%", left: "2%", animationDelay: "0.5s" }}>READING: TEXT2BIM</div>
-          <div className="pill animate-float" style={{ bottom: "14%", right: "4%", animationDelay: "1s" }}>$4,200 RAISED</div>
-          <div className="pill animate-float" style={{ top: "44%", left: "1%", animationDelay: "1.5s" }}>IFC · REVIT · ARCHICAD</div>
-          <div className="pill animate-float" style={{ bottom: "5%", left: "38%", animationDelay: "2s" }}>HIRING CO-FOUNDER</div>
-          <div className="pill animate-float" style={{ top: "3%", right: "24%", animationDelay: "2.5s" }}>KARACHI, PK</div>
-
-          {/* rotating/pulsating earth/geometry globe */}
-          <div className="w-48 h-48 rounded-full border-2 border-retro-cyan/30 flex items-center justify-center relative mb-8 animate-blobpulse">
-            {/* rotating inner star/polygon */}
-            <svg className="w-32 h-32 text-retro-cyan animate-spin" style={{ animationDuration: "25s" }} viewBox="0 0 100 100">
-              <polygon points="50,10 61,38 90,38 66,57 76,86 50,68 24,86 34,57 10,38 39,38" fill="none" stroke="currentColor" strokeWidth="1" />
-              <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 4" />
-            </svg>
-            {/* Absolute center orb */}
-            <div className="absolute w-4 h-4 bg-retro-cyan rounded-full animate-ping" />
-            <div className="absolute w-3.5 h-3.5 bg-retro-cyan rounded-full" />
-          </div>
-          
-          <div className="space-y-4 max-w-lg px-6 font-space">
-            <h1 className="font-pixel text-[11px] text-retro-cyan uppercase tracking-widest animate-blink">
-              NAQSH_E_FARYADI // EST. 2026
-            </h1>
-            <p className="text-retro-white text-xs leading-relaxed max-w-sm mx-auto opacity-95">
-              {isUrdu ? "آرکائیو فائلیں مستحکم ہو رہی ہیں۔ سسٹم کے ماحول میں داخل ہونے کے لیے کہیں بھی کلک کریں۔" : "All archival systems loaded successfully. Click anywhere to settle the workspace and view the desktop."}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* ── FLOATING OPERATING SYSTEM WINDOWS ── */}
       <FloatingWindows
