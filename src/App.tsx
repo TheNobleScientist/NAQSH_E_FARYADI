@@ -1928,29 +1928,118 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              
-              <div className="p-8 border border-gold/15 rounded bg-navy hover:border-gold/40 transition-all duration-300">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gold to-[#8B6914] flex items-center justify-center font-serif text-xl font-bold text-navy mb-6 shadow-md">
-                  Z
-                </div>
-                <h3 className="font-serif text-xl text-white mb-1">Muhammad Zain Bashir</h3>
-                <div className="text-[10px] font-mono tracking-wider text-gold uppercase mb-4">Co-Founder & CEO</div>
-                <p className="text-xs text-slate leading-relaxed">
-                  Architecture student and software developer. Builds spatial AI tools and BIM automation systems. Deeply grounded in Islamic geometric pattern construction and computational design.
-                </p>
-              </div>
+              {contentBlocks && contentBlocks.filter(b => b.blockType === "team_member").length > 0 ? (
+                contentBlocks
+                  .filter(b => b.blockType === "team_member" && b.displayLocations.includes("homepage"))
+                  .sort((a, b) => a.order - b.order)
+                  .map((member) => {
+                    const isZain = member.title.toLowerCase().includes("zain");
+                    const initials = member.title.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+                    const memberRole = member.data?.role || "Team Member";
+                    const hasImage = !!member.data?.imageUrl;
 
-              <div className="p-8 border border-gold/15 rounded bg-navy hover:border-gold/40 transition-all duration-300">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gold to-[#8B6914] flex items-center justify-center font-serif text-xl font-bold text-navy mb-6 shadow-md">
-                  B
-                </div>
-                <h3 className="font-serif text-xl text-white mb-1">Bashir Ahmed</h3>
-                <div className="text-[10px] font-mono tracking-wider text-gold uppercase mb-4">Co-Founder & COO</div>
-                <p className="text-xs text-slate leading-relaxed">
-                  Over 15 years of operational leadership, urban land surveying, and real estate development experience in Pakistan's major municipal centers. He bridges international computational design standards with regional civil engineering practices and strict municipal regulatory compliance frameworks.
-                </p>
-              </div>
+                    return (
+                      <div key={member.id || member.title} className="p-8 border border-gold/15 rounded bg-navy hover:border-gold/40 transition-all duration-300 flex flex-col justify-between">
+                        <div>
+                          {/* Image frame */}
+                          <div className="relative w-32 h-40 border border-gold/30 p-1 mb-6 bg-navy2 overflow-hidden group rounded-sm shadow-lg flex items-center justify-center shrink-0">
+                            {hasImage ? (
+                              <img
+                                src={member.data.imageUrl}
+                                alt={`${member.title} — ${memberRole}`}
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover grayscale contrast-125 transition-transform duration-500 group-hover:scale-105"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const fallback = e.currentTarget.parentElement?.querySelector('.avatar-fallback');
+                                  if (fallback) fallback.classList.remove('hidden');
+                                }}
+                              />
+                            ) : null}
+                            
+                            <div className={`avatar-fallback w-full h-full bg-[#070b18] flex items-center justify-center relative ${hasImage ? 'hidden' : ''}`}>
+                              {/* If it's Zain and no custom image, show his high-fidelity vector profile */}
+                              {isZain ? (
+                                <svg viewBox="0 0 100 120" className="w-full h-full text-gold/80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+                                    <stop offset="0%" stopColor="#C2A679" stopOpacity="0.25"/>
+                                    <stop offset="100%" stopColor="#04061F" stopOpacity="0"/>
+                                  </radialGradient>
+                                  <rect width="100%" height="100%" fill="url(#glow)"/>
+                                  
+                                  <line x1="15" y1="0" x2="15" y2="120" stroke="rgba(194, 166, 121, 0.1)" strokeWidth="0.5"/>
+                                  <line x1="50" y1="0" x2="50" y2="120" stroke="rgba(194, 166, 121, 0.15)" strokeWidth="0.5"/>
+                                  <line x1="85" y1="0" x2="85" y2="120" stroke="rgba(194, 166, 121, 0.1)" strokeWidth="0.5"/>
+                                  <line x1="0" y1="40" x2="100" y2="40" stroke="rgba(194, 166, 121, 0.1)" strokeWidth="0.5"/>
+                                  <line x1="0" y1="80" x2="100" y2="80" stroke="rgba(194, 166, 121, 0.1)" strokeWidth="0.5"/>
+                                  
+                                  <g stroke="#C2A679" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity="0.95">
+                                    <path d="M 32,45 C 32,32 40,22 55,22 C 65,22 72,28 72,38 C 72,40 70,45 68,48" strokeWidth="1.5" />
+                                    <path d="M 35,32 C 38,26 44,24 50,24 C 58,24 64,28 66,34" />
+                                    <path d="M 40,28 C 42,22 48,20 54,20 C 60,20 66,23 68,28" strokeWidth="1.5" />
+                                    <path d="M 30,42 C 28,38 31,30 36,30" />
+                                    <path d="M 68,36 C 74,38 76,46 73,50" />
+                                    
+                                    <path d="M 32,45 C 31,52 32,58 35,64 C 38,72 45,82 56,82 C 60,82 64,78 66,74" strokeWidth="1.5" />
+                                    
+                                    <path d="M 32,48 C 30,48 29,52 31,55 C 32,57 34,57 34,55" />
+                                    
+                                    <path d="M 42,48 C 45,46 49,47 51,50" strokeWidth="1.2" />
+                                    <path d="M 58,47 C 62,45 66,46 68,49" strokeWidth="1.2" />
+                                    <path d="M 45,51 C 46,54 48,54 49,52" />
+                                    <path d="M 60,51 C 61,53 63,53 64,51" />
+                                    
+                                    <path d="M 51,50 L 53,62 L 50,65" strokeWidth="1.2" />
+                                    
+                                    <path d="M 45,69 C 48,67 52,67 55,68" strokeWidth="1.8" />
+                                    <path d="M 47,72 C 50,71 53,71 55,72" />
+                                    <path d="M 49,75 C 51,76 53,76 54,75" />
+                                    
+                                    <path d="M 36,75 C 38,82 40,88 43,96" />
+                                    <path d="M 61,77 C 62,84 63,90 64,98" />
+                                    
+                                    <path d="M 25,100 L 40,94 L 50,98 L 60,94 L 75,100" strokeWidth="1.2" />
+                                    <path d="M 50,98 L 50,118" strokeWidth="1.5" />
+                                    <path d="M 45,102 L 40,118" strokeWidth="0.8" />
+                                    <path d="M 55,102 L 60,118" strokeWidth="0.8" />
+                                  </g>
+                                  <text x="50" y="112" textAnchor="middle" fill="#C2A679" fontSize="6" fontFamily="monospace" letterSpacing="1" opacity="0.8">ZAIN BASHIR</text>
+                                </svg>
+                              ) : (
+                                <div className="text-center font-serif text-3xl font-light text-gold uppercase bg-gold/5 border border-gold/15 w-16 h-16 rounded-full flex items-center justify-center">
+                                  {initials}
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
+                          <h3 className="font-serif text-xl text-white mb-1">{member.title}</h3>
+                          <div className="text-[10px] font-mono tracking-wider text-gold uppercase mb-4">{memberRole}</div>
+                          <p className="text-xs text-slate leading-relaxed mb-4">
+                            {member.body}
+                          </p>
+                        </div>
+                        {member.data?.githubUrl && (
+                          <div className="mt-auto pt-2">
+                            <a
+                              href={member.data.githubUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 text-[10px] font-mono text-gold hover:text-white transition-colors"
+                            >
+                              <span>VIEW PORTFOLIO</span>
+                              <span>→</span>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+              ) : (
+                <div className="col-span-2 text-center py-12 border border-gold/10 bg-navy">
+                  <p className="text-xs text-slate font-mono">No team members loaded from database.</p>
+                </div>
+              )}
             </div>
 
           </div>
@@ -2192,6 +2281,13 @@ export default function App() {
               className="hover:text-gold transition-colors cursor-pointer focus:outline-none uppercase"
             >
               Privacy Policy
+            </button>
+            <span className="text-gold/20">|</span>
+            <button 
+              onClick={() => navigateTo("admin")} 
+              className="hover:text-gold text-gold/90 hover:text-gold font-semibold transition-colors cursor-pointer focus:outline-none uppercase"
+            >
+              Control Panel
             </button>
           </div>
         </div>

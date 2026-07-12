@@ -30,6 +30,10 @@ export interface ContentBlock {
     partnerName?: string;
     supportType?: string;
     logoUrl?: string;
+    role?: string;
+    imageUrl?: string;
+    isFounder?: boolean;
+    githubUrl?: string;
   };
   displayLocations: string[]; // e.g., ["homepage", "build-log", "research"]
   order: number;
@@ -165,6 +169,34 @@ export async function seedInitialContentBlocks() {
         displayLocations: ["homepage", "build-log"],
         order: 8,
         createdAt: "2026-07-09T14:00:00.000Z"
+      },
+      {
+        blockType: "team_member",
+        title: "Muhammad Zain Bashir",
+        body: "Architecture student, systems engineer, and software developer. Leading computational research and development of Spatial AI models and BIM automation engines at Naqsh e Faryadi. Deeply grounded in Islamic geometric pattern construction, regional South Asian spatial topologies, and high-performance CAD integration.",
+        data: {
+          role: "Co-Founder, CEO & CTO",
+          imageUrl: "/muhammad_zain_cto.jpg",
+          isFounder: true,
+          githubUrl: "https://github.com/muhammadzainb"
+        },
+        displayLocations: ["homepage"],
+        order: 9,
+        createdAt: "2026-07-09T15:00:00.000Z"
+      },
+      {
+        blockType: "team_member",
+        title: "Bashir Ahmed",
+        body: "Over 15 years of operational leadership, urban land surveying, and real estate development experience in Pakistan's major municipal centers. He bridges international computational design standards with regional civil engineering practices and strict municipal regulatory compliance frameworks.",
+        data: {
+          role: "Co-Founder & COO",
+          imageUrl: "",
+          isFounder: true,
+          githubUrl: ""
+        },
+        displayLocations: ["homepage"],
+        order: 10,
+        createdAt: "2026-07-09T16:00:00.000Z"
       }
     ];
 

@@ -57,6 +57,39 @@
         }
       },
       "required": ["title", "status", "order", "createdAt"]
+    },
+    "CustomPage": {
+      "title": "CustomPage",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "titleUr": { "type": "string" },
+        "contentEn": { "type": "string" },
+        "contentUr": { "type": "string" }
+      },
+      "required": ["slug", "titleEn", "titleUr", "contentEn", "contentUr"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "type": "object",
+      "properties": {
+        "heroTitleEn": { "type": "string" },
+        "heroTitleUr": { "type": "string" },
+        "heroSubtitleEn": { "type": "string" },
+        "heroSubtitleUr": { "type": "string" },
+        "tickerEn": { "type": "string" },
+        "topBannerEn": { "type": "string" },
+        "topBannerUr": { "type": "string" },
+        "showTopBanner": { "type": "boolean" },
+        "pages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/entities/CustomPage"
+          }
+        }
+      },
+      "required": ["heroTitleEn", "heroTitleUr", "heroSubtitleEn", "heroSubtitleUr", "tickerEn", "topBannerEn", "topBannerUr", "showTopBanner", "pages"]
     }
   },
   "firestore": {
@@ -71,6 +104,12 @@
         "$ref": "#/entities/CeoTask"
       },
       "description": "Private checklist of company tasks managed by the CEO."
+    },
+    "siteSettings": {
+      "schema": {
+        "$ref": "#/entities/SiteSettings"
+      },
+      "description": "Global settings for hero titles, tickers, top banners, and custom pages."
     }
   }
 }

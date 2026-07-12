@@ -62,6 +62,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [supportType, setSupportType] = useState("");
   const [partnerLogo, setPartnerLogo] = useState("");
 
+  // 4. Team Member data
+  const [teamRole, setTeamRole] = useState("");
+  const [teamImageUrl, setTeamImageUrl] = useState("");
+  const [teamIsFounder, setTeamIsFounder] = useState(false);
+  const [teamGithubUrl, setTeamGithubUrl] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+
+  // Edit Mode state
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+
   // Global Site Settings States
   const [heroTitleEn, setHeroTitleEn] = useState("");
   const [heroTitleUr, setHeroTitleUr] = useState("");
@@ -202,6 +212,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         supportType: supportType || "",
         logoUrl: partnerLogo || "general",
       };
+    } else if (blockTypeToSave === "team_member") {
+      blockData = {
+        role: teamRole || "",
+        imageUrl: teamImageUrl || "",
+        isFounder: teamIsFounder,
+        githubUrl: teamGithubUrl || "",
+      };
     }
 
     const newBlock: Omit<ContentBlock, "id"> = {
@@ -215,18 +232,81 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     };
 
     try {
-      await saveContentBlock(newBlock);
+      await saveContentBlock(newBlock, editingBlockId || undefined);
       // Clear core forms
       setCmsTitle("");
       setCmsBody("");
       setCustomBlockType("");
+      setEditingBlockId(null);
+      
+      // Clear team forms
+      setTeamRole("");
+      setTeamImageUrl("");
+      setTeamIsFounder(false);
+      setTeamGithubUrl("");
+      
       // Refresh
       await loadData();
       onRefreshGlobalData();
-      alert("Content Block saved successfully and updated live!");
+      alert(editingBlockId ? "Content Block updated successfully!" : "Content Block saved successfully and updated live!");
     } catch (err) {
       console.error("Save content block failed", err);
       alert("Error saving block. Review security rules.");
+    }
+  };
+
+  const handleEditBlock = (block: ContentBlock) => {
+    setEditingBlockId(block.id || null);
+    setCmsBlockType(block.blockType);
+    setCmsTitle(block.title);
+    setCmsBody(block.body);
+    setCmsOrder(block.order);
+    setDisplayHome(block.displayLocations.includes("homepage"));
+    setDisplayLog(block.displayLocations.includes("build-log"));
+    setDisplayResearch(block.displayLocations.includes("research"));
+
+    // Reset sub-states to defaults
+    setRaised("28500");
+    setGoal("50000");
+    setCurrency("USD");
+    setAuthors("");
+    setYear("2026");
+    setPaperUrl("");
+    setPaperTag("Text-to-BIM");
+    setPaperStatus("reading");
+    setPartnerName("");
+    setSupportType("");
+    setPartnerLogo("");
+    setTeamRole("");
+    setTeamImageUrl("");
+    setTeamIsFounder(false);
+    setTeamGithubUrl("");
+
+    if (block.blockType === "funding_tracker") {
+      setRaised(block.data?.raised?.toString() || "");
+      setGoal(block.data?.goal?.toString() || "");
+      setCurrency(block.data?.currency || "USD");
+    } else if (block.blockType === "research") {
+      setAuthors(block.data?.authors || "");
+      setYear(block.data?.year?.toString() || "2026");
+      setPaperUrl(block.data?.url || "");
+      setPaperTag(block.data?.tag || "Text-to-BIM");
+      setPaperStatus(block.data?.status || "reading");
+    } else if (block.blockType === "partner_thanks") {
+      setPartnerName(block.data?.partnerName || "");
+      setSupportType(block.data?.supportType || "");
+      setPartnerLogo(block.data?.logoUrl || "");
+    } else if (block.blockType === "team_member") {
+      setTeamRole(block.data?.role || "");
+      setTeamImageUrl(block.data?.imageUrl || "");
+      setTeamIsFounder(!!block.data?.isFounder);
+      setTeamGithubUrl(block.data?.githubUrl || "");
+    }
+    
+    // Scroll up to the editor for convenience
+    const editorElem = document.querySelector("form");
+    if (editorElem) {
+      editorElem.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -588,6 +668,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   <option value="milestone">Milestone update</option>
                   <option value="research">Research study citation</option>
                   <option value="team">Hiring / Team search</option>
+                  <option value="team_member">Team Member Profile</option>
                   <option value="funding_tracker">Support funding tracker</option>
                   <option value="partner_thanks">Partner Logo support</option>
                   <option value="custom">Add custom type...</option>
@@ -784,6 +865,124 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </div>
             )}
 
+            {/* 4. TEAM MEMBER PROFILE DATA */}
+            {(cmsBlockType === "team_member" || customBlockType === "team_member") && (
+              <div className="p-4 bg-navy border border-gold/10 rounded-sm space-y-4">
+                <span className="text-[10px] font-mono text-gold uppercase block border-b border-gold/5 pb-1">TEAM MEMBER INFORMATION</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[9px] font-mono text-slate block mb-1">Role / Job Title</label>
+                    <input 
+                      type="text"
+                      value={teamRole}
+                      onChange={(e) => setTeamRole(e.target.value)}
+                      placeholder="e.g. Co-Founder, Lead Computational Architect"
+                      className="w-full p-2.5 bg-navy2 border border-gold/10 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-mono text-slate block mb-1">GitHub / Portfolio URL (Optional)</label>
+                    <input 
+                      type="text"
+                      value={teamGithubUrl}
+                      onChange={(e) => setTeamGithubUrl(e.target.value)}
+                      placeholder="https://github.com/..."
+                      className="w-full p-2.5 bg-navy2 border border-gold/10 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-mono select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={teamIsFounder}
+                      onChange={(e) => setTeamIsFounder(e.target.checked)}
+                      className="accent-gold h-4 w-4 cursor-pointer"
+                    />
+                    <span>Mark as Founder / Principal Leader</span>
+                  </label>
+                </div>
+
+                {/* Profile Picture Uploader & Field */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-mono text-slate uppercase block mb-1">Profile Picture (Upload or Paste URL)</span>
+                  
+                  {/* Drag-and-drop area */}
+                  <div
+                    onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragActive(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        const file = e.dataTransfer.files[0];
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          if (typeof reader.result === "string") setTeamImageUrl(reader.result);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className={`border-2 border-dashed rounded p-4 text-center transition-all ${
+                      dragActive ? "border-gold bg-gold/10" : "border-gold/20 bg-navy2/40"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      {teamImageUrl ? (
+                        <div className="relative w-20 h-24 border border-gold/30 p-0.5 bg-navy rounded overflow-hidden">
+                          <img src={teamImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setTeamImageUrl("")}
+                            className="absolute top-0 right-0 p-1 bg-rose-600 text-white hover:bg-rose-700 transition rounded-bl cursor-pointer"
+                            title="Remove image"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-slate text-xs py-2">
+                          <p className="font-sans font-light">Drag & drop profile photo here, or</p>
+                          <label className="inline-block mt-2 px-3 py-1.5 bg-gold/15 hover:bg-gold/30 text-gold border border-gold/30 rounded text-xs font-semibold cursor-pointer select-none transition-colors">
+                            <span>Browse File</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  const file = e.target.files[0];
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    if (typeof reader.result === "string") setTeamImageUrl(reader.result);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Manual URL input fallback */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-mono text-slate block">Or, paste absolute profile photo URL</label>
+                    <input 
+                      type="text"
+                      value={teamImageUrl}
+                      onChange={(e) => setTeamImageUrl(e.target.value)}
+                      placeholder="/muhammad_zain_cto.jpg or external url"
+                      className="w-full p-2 bg-navy2 border border-gold/10 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Display locations selectors */}
             <div className="space-y-1">
               <span className="text-[10px] font-mono text-slate uppercase block mb-1">Target View Port Locations</span>
@@ -818,13 +1017,35 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-3 bg-gold hover:bg-gold-lt text-navy font-bold text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Save size={14} />
-              <span>Publish Content Block</span>
-            </button>
+            <div className="flex gap-3">
+              {editingBlockId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingBlockId(null);
+                    setCmsTitle("");
+                    setCmsBody("");
+                    setCmsBlockType("milestone");
+                    setCustomBlockType("");
+                    // Clear team states
+                    setTeamRole("");
+                    setTeamImageUrl("");
+                    setTeamIsFounder(false);
+                    setTeamGithubUrl("");
+                  }}
+                  className="flex-1 py-3 bg-navy border border-rose-500/30 hover:border-rose-500 text-rose-400 font-gold font-bold text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                >
+                  Cancel Edit
+                </button>
+              )}
+              <button
+                type="submit"
+                className="flex-[2] py-3 bg-gold hover:bg-gold-lt text-navy font-bold text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Save size={14} />
+                <span>{editingBlockId ? "Update Content Block" : "Publish Content Block"}</span>
+              </button>
+            </div>
           </form>
 
           {/* List of existing content blocks for easy deletion/audit */}
@@ -844,13 +1065,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       <h4 className="text-white font-serif font-semibold">{block.title}</h4>
                       <p className="text-slate text-[10px] line-clamp-1 mt-0.5">{block.body}</p>
                     </div>
-                    <button
-                      onClick={() => block.id && handleDeleteBlock(block.id)}
-                      className="p-1.5 text-slate/50 hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer transition-colors shrink-0"
-                      title="Delete Content Block"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleEditBlock(block)}
+                        className="p-1.5 text-slate/50 hover:text-gold hover:bg-gold/10 rounded cursor-pointer transition-colors"
+                        title="Edit Content Block"
+                      >
+                        <Settings size={13} />
+                      </button>
+                      <button
+                        onClick={() => block.id && handleDeleteBlock(block.id)}
+                        className="p-1.5 text-slate/50 hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer transition-colors"
+                        title="Delete Content Block"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (
